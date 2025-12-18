@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import Sidebar from '@/components/Sidebar'
-import { GraduationCap, ExternalLink, Eye, EyeOff, Copy, Check, BookOpen, TrendingUp, Briefcase, Zap } from 'lucide-react'
+import { GraduationCap, ExternalLink, Eye, EyeOff, Copy, Check, BookOpen, TrendingUp, Briefcase, Zap, X } from 'lucide-react'
 
 export default function AcademiaPage() {
   const [revealedPasswords, setRevealedPasswords] = useState({})
   const [copiedFields, setCopiedFields] = useState({})
+  const [selectedCurso, setSelectedCurso] = useState(null)
 
   const cursos = [
     {
@@ -91,103 +91,140 @@ export default function AcademiaPage() {
     return colors[cor] || colors.blue
   }
 
+  const openModal = (curso) => {
+    setSelectedCurso(curso)
+  }
+
+  const closeModal = () => {
+    setSelectedCurso(null)
+  }
+
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-franca-green-light to-franca-blue-light">
-      <Sidebar />
-      
-      <main className="flex-1 p-8 overflow-y-auto">
-        <div className="mb-8 animate-fadeIn">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="w-12 h-12 bg-gradient-to-r from-franca-green to-franca-green-hover rounded-xl flex items-center justify-center">
-              <GraduationCap size={24} className="text-franca-blue" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-franca-blue">Academia Franca</h1>
-              <p className="text-gray-600">Centro de Conhecimento e Capacitação</p>
-            </div>
+    <main className="flex-1 p-8 overflow-y-auto">
+      <div className="mb-8 animate-fadeIn">
+        <div className="flex items-center space-x-3 mb-2">
+          <div className="w-12 h-12 bg-gradient-to-r from-franca-green to-franca-green-hover rounded-xl flex items-center justify-center">
+            <GraduationCap size={24} className="text-franca-blue" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-franca-blue">Academia Franca</h1>
+            <p className="text-gray-600">Centro de Conhecimento e Capacitação</p>
           </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fadeIn">
-          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-franca-green/20">
-            <p className="text-xs text-gray-600 mb-1">Total de Cursos</p>
-            <p className="text-2xl font-bold text-franca-green">{cursos.length}</p>
-          </div>
-          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20">
-            <p className="text-xs text-gray-600 mb-1">Plataformas</p>
-            <p className="text-2xl font-bold text-blue-600">5</p>
-          </div>
-          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-purple-500/20">
-            <p className="text-xs text-gray-600 mb-1">Categorias</p>
-            <p className="text-2xl font-bold text-purple-600">5</p>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fadeIn">
+        <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-franca-green/20">
+          <p className="text-xs text-gray-600 mb-1">Total de Cursos</p>
+          <p className="text-2xl font-bold text-franca-green">{cursos.length}</p>
         </div>
+        <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20">
+          <p className="text-xs text-gray-600 mb-1">Plataformas</p>
+          <p className="text-2xl font-bold text-blue-600">5</p>
+        </div>
+        <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-purple-500/20">
+          <p className="text-xs text-gray-600 mb-1">Categorias</p>
+          <p className="text-2xl font-bold text-purple-600">5</p>
+        </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {cursos.map((curso) => {
-            const Icon = curso.icon
-            return (
-              <div key={curso.id} className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-transparent hover:border-franca-green transition-all">
-                <div className="p-6 border-b border-gray-100">
-                  <div className="flex items-start space-x-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-franca-green to-franca-green-hover rounded-xl flex items-center justify-center">
-                      <Icon size={24} className="text-franca-blue" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-franca-blue">{curso.nome}</h3>
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border mt-1 ${getCategoryColor(curso.cor)}`}>
-                        {curso.categoria}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600">{curso.descricao}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {cursos.map((curso) => {
+          const Icon = curso.icon
+          return (
+            <button
+              key={curso.id}
+              onClick={() => openModal(curso)}
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl hover:scale-105 transition-all text-left border-2 border-transparent hover:border-franca-green"
+            >
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-franca-green to-franca-green-hover rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Icon size={20} className="text-franca-blue" />
                 </div>
-
-                <div className="p-6 bg-gray-50 space-y-3">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Credenciais de Acesso</p>
-                  
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Login</label>
-                    <div className="flex items-center space-x-2">
-                      <input type="text" value={curso.login} readOnly className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800" />
-                      <button onClick={() => copyToClipboard(curso.login, `login-${curso.id}`)} className="p-2 bg-franca-green hover:bg-franca-green-hover text-franca-blue rounded-lg transition-all">
-                        {copiedFields[`login-${curso.id}`] ? <Check size={16} /> : <Copy size={16} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Senha</label>
-                    <div className="flex items-center space-x-2">
-                      <input type={revealedPasswords[curso.id] ? 'text' : 'password'} value={curso.senha} readOnly className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800" />
-                      <button onClick={() => togglePassword(curso.id)} className="p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-all">
-                        {revealedPasswords[curso.id] ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                      <button onClick={() => copyToClipboard(curso.senha, `senha-${curso.id}`)} className="p-2 bg-franca-green hover:bg-franca-green-hover text-franca-blue rounded-lg transition-all">
-                        {copiedFields[`senha-${curso.id}`] ? <Check size={16} /> : <Copy size={16} />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6">
-                  <a href={curso.url} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-franca-green to-franca-green-hover text-franca-blue font-semibold rounded-lg hover:shadow-lg transition-all">
-                    <ExternalLink size={18} />
-                    <span>Acessar Plataforma</span>
-                  </a>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-franca-blue truncate">{curso.nome}</h3>
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold border mt-1 ${getCategoryColor(curso.cor)}`}>
+                    {curso.categoria}
+                  </span>
                 </div>
               </div>
-            )
-          })}
-        </div>
+              <p className="text-xs text-gray-600 line-clamp-2">{curso.descricao}</p>
+            </button>
+          )
+        })}
+      </div>
 
-        <footer className="mt-16 pt-8 border-t border-gray-200 text-center text-gray-500 text-sm">
-          <p className="flex items-center justify-center space-x-2">
-            <BookOpen size={16} />
-            <span>Invista no seu conhecimento. Acesse, aprenda e cresça com a Academia Franca.</span>
-          </p>
-        </footer>
-      </main>
-    </div>
+      <footer className="mt-16 pt-8 border-t border-gray-200 text-center text-gray-500 text-sm">
+        <p className="flex items-center justify-center space-x-2">
+          <BookOpen size={16} />
+          <span>Invista no seu conhecimento. Acesse, aprenda e cresça com a Academia Franca.</span>
+        </p>
+      </footer>
+
+      {selectedCurso && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 animate-fadeIn" onClick={closeModal}></div>
+          
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto animate-fadeIn z-[9999]">
+            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-3 flex-1">
+                  <div className="w-12 h-12 bg-gradient-to-r from-franca-green to-franca-green-hover rounded-xl flex items-center justify-center flex-shrink-0">
+                    <selectedCurso.icon size={24} className="text-franca-blue" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl font-bold text-franca-blue">{selectedCurso.nome}</h2>
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border mt-1 ${getCategoryColor(selectedCurso.cor)}`}>
+                      {selectedCurso.categoria}
+                    </span>
+                  </div>
+                </div>
+                <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-all ml-2 flex-shrink-0">
+                  <X size={20} className="text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div>
+                <p className="text-sm text-gray-700">{selectedCurso.descricao}</p>
+              </div>
+
+              <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Credenciais de Acesso</p>
+                
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">Login / E-mail</label>
+                  <div className="flex items-center space-x-2">
+                    <input type="text" value={selectedCurso.login} readOnly className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 font-mono" />
+                    <button onClick={() => copyToClipboard(selectedCurso.login, `modal-login-${selectedCurso.id}`)} className="p-2 bg-franca-green hover:bg-franca-green-hover text-franca-blue rounded-lg transition-all" title="Copiar login">
+                      {copiedFields[`modal-login-${selectedCurso.id}`] ? <Check size={18} /> : <Copy size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">Senha</label>
+                  <div className="flex items-center space-x-2">
+                    <input type={revealedPasswords[selectedCurso.id] ? 'text' : 'password'} value={selectedCurso.senha} readOnly className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 font-mono" />
+                    <button onClick={() => togglePassword(selectedCurso.id)} className="p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-all" title={revealedPasswords[selectedCurso.id] ? 'Ocultar senha' : 'Mostrar senha'}>
+                      {revealedPasswords[selectedCurso.id] ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                    <button onClick={() => copyToClipboard(selectedCurso.senha, `modal-senha-${selectedCurso.id}`)} className="p-2 bg-franca-green hover:bg-franca-green-hover text-franca-blue rounded-lg transition-all" title="Copiar senha">
+                      {copiedFields[`modal-senha-${selectedCurso.id}`] ? <Check size={18} /> : <Copy size={18} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <a href={selectedCurso.url} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-franca-green to-franca-green-hover text-franca-blue font-semibold rounded-lg hover:shadow-lg transition-all">
+                <ExternalLink size={18} />
+                <span>Acessar Plataforma</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
   )
 }

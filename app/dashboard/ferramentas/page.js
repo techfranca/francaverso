@@ -1,8 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Sidebar from '@/components/Sidebar'
+import { useState } from 'react'
 import ToolCard from '@/components/ToolCard'
 import { 
   FileText, 
@@ -136,105 +134,88 @@ const categories = [
 ]
 
 export default function FerramentasPage() {
-  const router = useRouter()
-  const [user, setUser] = useState(null)
   const [activeCategory, setActiveCategory] = useState('projetos')
-
-  useEffect(() => {
-    const userData = localStorage.getItem('francaverso_user')
-    if (!userData) {
-      router.push('/')
-      return
-    }
-    setUser(JSON.parse(userData))
-  }, [router])
-
-  if (!user) return null
 
   const currentTools = tools[activeCategory] || []
   const activeTab = categories.find(cat => cat.id === activeCategory)
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-franca-green-light to-franca-blue-light">
-      <Sidebar />
-      
-      <main className="flex-1 p-8 overflow-y-auto">
-        {/* Header */}
-        <div className="mb-8 animate-fadeIn">
-          <h1 className="text-3xl font-bold text-franca-blue mb-2">
-            Ferramentas e Sistemas
-          </h1>
-          <p className="text-gray-600">
-            Acesse todas as ferramentas da Franca de forma centralizada
-          </p>
-        </div>
+    <main className="flex-1 p-8 overflow-y-auto">
+      {/* Header */}
+      <div className="mb-8 animate-fadeIn">
+        <h1 className="text-3xl font-bold text-franca-blue mb-2">
+          Ferramentas e Sistemas
+        </h1>
+        <p className="text-gray-600">
+          Acesse todas as ferramentas da Franca de forma centralizada
+        </p>
+      </div>
 
-        {/* Stats compactos */}
-        <div className="grid grid-cols-3 gap-4 mb-8 animate-fadeIn" style={{animationDelay: '0.1s'}}>
-          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-franca-green/20">
-            <p className="text-xs text-gray-600 mb-1">Ferramentas</p>
-            <p className="text-2xl font-bold text-franca-green">15</p>
-          </div>
-          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-franca-blue/20">
-            <p className="text-xs text-gray-600 mb-1">Disponibilidade</p>
-            <p className="text-2xl font-bold text-franca-blue">100%</p>
-          </div>
-          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-green-500/20">
-            <p className="text-xs text-gray-600 mb-1">Status</p>
-            <div className="flex items-center space-x-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              <span className="text-lg font-bold text-green-600">Online</span>
-            </div>
+      {/* Stats compactos */}
+      <div className="grid grid-cols-3 gap-4 mb-8 animate-fadeIn" style={{animationDelay: '0.1s'}}>
+        <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-franca-green/20">
+          <p className="text-xs text-gray-600 mb-1">Ferramentas</p>
+          <p className="text-2xl font-bold text-franca-green">15</p>
+        </div>
+        <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-franca-blue/20">
+          <p className="text-xs text-gray-600 mb-1">Disponibilidade</p>
+          <p className="text-2xl font-bold text-franca-blue">100%</p>
+        </div>
+        <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-green-500/20">
+          <p className="text-xs text-gray-600 mb-1">Status</p>
+          <div className="flex items-center space-x-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            <span className="text-lg font-bold text-green-600">Online</span>
           </div>
         </div>
+      </div>
 
-        {/* Botões de Categoria */}
-        <div className="mb-8 animate-fadeIn" style={{animationDelay: '0.2s'}}>
-          <div className="flex flex-wrap gap-3">
-            {categories.map((category) => {
-              const Icon = category.icon
-              const isActive = activeCategory === category.id
-              
-              return (
-                <button
-                  key={category.id}
-                  onClick={() => setActiveCategory(category.id)}
-                  className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-franca-green to-franca-green-hover text-franca-blue shadow-lg'
-                      : 'bg-white/80 text-gray-700 hover:bg-white border border-gray-200'
-                  }`}
-                >
-                  <Icon size={20} />
-                  <span>{category.name}</span>
-                </button>
-              )
-            })}
-          </div>
+      {/* Botões de Categoria */}
+      <div className="mb-8 animate-fadeIn" style={{animationDelay: '0.2s'}}>
+        <div className="flex flex-wrap gap-3">
+          {categories.map((category) => {
+            const Icon = category.icon
+            const isActive = activeCategory === category.id
+            
+            return (
+              <button
+                key={category.id}
+                onClick={() => setActiveCategory(category.id)}
+                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 ${
+                  isActive
+                    ? 'bg-gradient-to-r from-franca-green to-franca-green-hover text-franca-blue shadow-lg'
+                    : 'bg-white/80 text-gray-700 hover:bg-white border border-gray-200'
+                }`}
+              >
+                <Icon size={20} />
+                <span>{category.name}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Ferramentas da categoria ativa */}
+      <div className="animate-fadeIn" style={{animationDelay: '0.3s'}}>
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="w-1 h-8 bg-franca-green rounded-full"></div>
+          <h2 className="text-2xl font-bold text-franca-blue">{activeTab?.name}</h2>
+          <span className="bg-franca-green/20 text-franca-green px-3 py-1 rounded-full text-sm font-semibold">
+            {currentTools.length} {currentTools.length === 1 ? 'ferramenta' : 'ferramentas'}
+          </span>
         </div>
 
-        {/* Ferramentas da categoria ativa */}
-        <div className="animate-fadeIn" style={{animationDelay: '0.3s'}}>
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="w-1 h-8 bg-franca-green rounded-full"></div>
-            <h2 className="text-2xl font-bold text-franca-blue">{activeTab?.name}</h2>
-            <span className="bg-franca-green/20 text-franca-green px-3 py-1 rounded-full text-sm font-semibold">
-              {currentTools.length} {currentTools.length === 1 ? 'ferramenta' : 'ferramentas'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {currentTools.map((tool, index) => (
-              <ToolCard key={tool.name} {...tool} color="franca-green" />
-            ))}
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {currentTools.map((tool) => (
+            <ToolCard key={tool.name} {...tool} color="franca-green" />
+          ))}
         </div>
+      </div>
 
-        {/* Footer */}
-        <footer className="mt-16 pt-8 border-t border-gray-200 text-center text-gray-500 text-sm">
-          <p>© 2025 Franca. Desenvolvido com 💚 pela equipe de tecnologia.</p>
-        </footer>
-      </main>
-    </div>
+      {/* Footer */}
+      <footer className="mt-16 pt-8 border-t border-gray-200 text-center text-gray-500 text-sm">
+        <p>© 2025 Franca. Desenvolvido com 💚 pela equipe de tecnologia.</p>
+      </footer>
+    </main>
   )
 }

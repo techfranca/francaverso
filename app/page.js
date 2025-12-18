@@ -52,6 +52,9 @@ export default function LoginPage() {
         return
       }
 
+      // ✅ CRIAR O COOKIE (ESSENCIAL PARA SERVER-SIDE AUTH)
+      document.cookie = `francaverso_session=${data.user.id}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`
+      
       // Salvar sessão localmente também (fallback)
       localStorage.setItem('francaverso_user', JSON.stringify(data.user))
 

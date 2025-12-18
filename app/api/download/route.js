@@ -30,20 +30,13 @@ export async function GET(request) {
     const jobId = searchParams.get('jobId')
 
     if (!jobId) {
-      return NextResponse.json(
-        { error: 'JobId não fornecido' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'JobId não fornecido' }, { status: 400 })
     }
 
-    // Buscar job na memória
     const job = downloadJobs.get(jobId)
 
     if (!job) {
-      return NextResponse.json(
-        { error: 'Job não encontrado' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Job não encontrado' }, { status: 404 })
     }
 
     return NextResponse.json({
@@ -73,25 +66,19 @@ export async function POST(request) {
     const sessionUserId = cookieStore.get('francaverso_session')?.value
 
     if (!sessionUserId) {
-      return NextResponse.json(
-        { error: 'Não autenticado' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
     const { urls } = await request.json()
 
     if (!urls || !Array.isArray(urls) || urls.length === 0) {
-      return NextResponse.json(
-        { error: 'URLs inválidas' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'URLs inválidas' }, { status: 400 })
     }
 
     // Verificar se o executável existe
     if (!fs.existsSync(ytDlpPath)) {
       return NextResponse.json(
-        { 
+        {
           error: 'yt-dlp não encontrado',
           message: 'Por favor, coloque o yt-dlp.exe na pasta bin/'
         },
@@ -102,7 +89,7 @@ export async function POST(request) {
     const supabase = createServerClient()
     const jobId = uuidv4()
 
-    // Criar job no banco de dados
+    // Criar job no banco de dados (mantendo seu padrão)
     const { data: job, error: jobError } = await supabase
       .from('download_jobs')
       .insert({
@@ -122,7 +109,7 @@ export async function POST(request) {
         { status: 500 }
       )
     }
-    
+
     // Inicializar job na memória
     downloadJobs.set(jobId, {
       status: 'processing',
@@ -134,24 +121,51 @@ export async function POST(request) {
     })
 
     // Processar downloads em background
-    processDownloads(jobId, urls, sessionUserId)
+    processDownloads(jobId, urls, sessionUserId).catch((e) => {
+      console.error('❌ Falha no processDownloads:', e)
+    })
 
     return NextResponse.json({
-      jobId: jobId,
+      jobId,
       message: 'Download iniciado',
       total: urls.length
     })
-
   } catch (error) {
     console.error('❌ Erro geral:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Erro ao processar downloads',
-        message: error.message 
+        message: error?.message ?? 'Erro desconhecido'
       },
       { status: 500 }
     )
   }
+}
+
+// ============================================
+// HELPERS
+// ============================================
+
+// Remove parâmetros de playlist (YouTube Music / Mix etc)
+// Mesmo com --no-playlist, o yt-dlp pode tentar resolver “list” antes.
+function normalizeUrl(inputUrl) {
+  let url = (inputUrl ?? '').trim()
+  if (!url) return url
+
+  // remove &list=... mantendo o watch?v=
+  if (url.includes('&list=')) url = url.split('&list=')[0]
+  // remove ?list=... em casos diferentes
+  if (url.includes('?list=')) url = url.split('?list=')[0]
+
+  return url
+}
+
+function sanitizeTitle(title) {
+  const base = (title ?? 'Video')
+    .replace(/[^a-z0-9]/gi, '_')
+    .replace(/_+/g, '_')
+    .substring(0, 100)
+  return base || 'Video'
 }
 
 // ============================================
@@ -166,8 +180,7 @@ async function processDownloads(jobId, urls, userId) {
   console.log('📁 Salvando em:', DOWNLOADS_DIR)
 
   for (let i = 0; i < urls.length; i++) {
-    const url = urls[i].trim()
-    
+    let url = normalizeUrl(urls[i])
     if (!url) continue
 
     console.log(`\n⬇️ Baixando ${i + 1}/${urls.length}: ${url}`)
@@ -176,37 +189,40 @@ async function processDownloads(jobId, urls, userId) {
     job.current = {
       index: i + 1,
       total: urls.length,
-      url: url,
+      url,
       title: 'Obtendo informações...'
     }
     job.progress = 0
 
     try {
-      // Obter informações do vídeo COM TIMEOUT
+      // Obter informações do vídeo COM TIMEOUT (mantido)
       console.log('📊 Obtendo informações do vídeo...')
-      
+
       let videoInfo
       try {
-        // Criar promise com timeout de 30 segundos
         const infoPromise = ytDlpWrap.getVideoInfo(url)
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout ao obter informações do vídeo')), 30000)
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Timeout ao obter informações do vídeo')),
+            30000
+          )
         )
-        
         videoInfo = await Promise.race([infoPromise, timeoutPromise])
         console.log(`✅ Título: ${videoInfo.title}`)
       } catch (infoError) {
-        console.error('⚠️ Erro ao obter info, tentando download direto:', infoError.message)
-        // Se falhar ao obter info, usa título genérico
+        console.error(
+          '⚠️ Erro ao obter info, tentando download direto:',
+          infoError.message
+        )
         videoInfo = {
           title: `Video_${Date.now()}`,
           extractor_key: 'Unknown'
         }
       }
-      
+
       job.current.title = videoInfo.title
 
-      // Atualizar job no banco
+      // Atualizar job no banco (mantido)
       await supabase
         .from('download_jobs')
         .update({
@@ -214,19 +230,21 @@ async function processDownloads(jobId, urls, userId) {
           current_video_progress: 0
         })
         .eq('id', jobId)
-      
-      // Nome do arquivo (sanitizado)
-      const sanitizedTitle = videoInfo.title
-        .replace(/[^a-z0-9]/gi, '_')
-        .substring(0, 100)
-      
+
+      const sanitizedTitle = sanitizeTitle(videoInfo.title)
       const filename = `${sanitizedTitle}_${Date.now()}.mp4`
       const outputPath = path.join(DOWNLOADS_DIR, filename)
 
       console.log(`💾 Baixando para: ${filename}`)
 
-      // Baixar vídeo com progresso
-      const ytDlpProcess = ytDlpWrap.exec([
+      // ======================================================
+      // ✅ CORREÇÃO DEFINITIVA DO ERRO "reading 'on'"
+      // - O retorno de exec() pode variar entre versões:
+      //   às vezes é ChildProcess, às vezes wrapper/promise.
+      // - Vamos normalizar e VALIDAR antes de usar .on/.stdout.
+      // ======================================================
+
+      const execResult = ytDlpWrap.exec([
         url,
         '-o', outputPath,
         '--format', 'best[ext=mp4]/best',
@@ -236,52 +254,87 @@ async function processDownloads(jobId, urls, userId) {
         '--socket-timeout', '30'
       ])
 
-      let lastProgress = 0
+      // Alguns builds retornam Promise. Se for Promise, aguarde e pegue o processo.
+      const ytDlpProcess =
+        typeof execResult?.then === 'function' ? await execResult : execResult
 
-      // Capturar progresso
-      ytDlpProcess.stdout.on('data', async (data) => {
-        const output = data.toString()
-        console.log('📥', output.trim())
-        
-        const progressMatch = output.match(/(\d+\.?\d*)%/)
-        
-        if (progressMatch) {
+      if (!ytDlpProcess || typeof ytDlpProcess.on !== 'function') {
+        throw new Error(
+          'Falha ao iniciar o processo do yt-dlp (processo inválido)'
+        )
+      }
+
+      let lastProgressSavedBucket = -1
+      let lastProgressLoggedBucket = -1
+
+      // Capturar progresso em tempo real (stdout pode ser null em alguns casos)
+      if (ytDlpProcess.stdout && typeof ytDlpProcess.stdout.on === 'function') {
+        ytDlpProcess.stdout.on('data', async (data) => {
+          const output = data.toString()
+          // console.log('📥', output.trim())
+
+          const progressMatch = output.match(/(\d+\.?\d*)%/)
+          if (!progressMatch) return
+
           const progress = parseFloat(progressMatch[1])
+          if (Number.isNaN(progress)) return
+
           job.progress = progress
 
-          // Atualizar no banco a cada 10%
-          if (Math.floor(progress / 10) > Math.floor(lastProgress / 10)) {
-            console.log(`📊 Progresso: ${Math.floor(progress)}%`)
-            lastProgress = progress
-            
-            await supabase
-              .from('download_jobs')
-              .update({ current_video_progress: progress })
-              .eq('id', jobId)
+          // bucket de 1% pro log leve
+          const logBucket = Math.floor(progress)
+          if (logBucket !== lastProgressLoggedBucket) {
+            lastProgressLoggedBucket = logBucket
+            console.log(`📊 Progresso: ${logBucket}%`)
           }
-        }
-      })
 
-      ytDlpProcess.stderr.on('data', (data) => {
-        console.error('❌ Stderr:', data.toString().trim())
-      })
+          // bucket de 5% pro banco (evita martelar supabase)
+          const dbBucket = Math.floor(progress / 5)
+          if (dbBucket !== lastProgressSavedBucket) {
+            lastProgressSavedBucket = dbBucket
+            try {
+              await supabase
+                .from('download_jobs')
+                .update({ current_video_progress: progress })
+                .eq('id', jobId)
+            } catch (e) {
+              // não derruba download por falha de update
+              console.error('⚠️ Falha ao atualizar progresso no banco:', e?.message)
+            }
+          }
+        })
+      } else {
+        console.warn('⚠️ stdout indisponível; progresso em tempo real pode não aparecer.')
+      }
 
-      await ytDlpProcess
+      if (ytDlpProcess.stderr && typeof ytDlpProcess.stderr.on === 'function') {
+        ytDlpProcess.stderr.on('data', (data) => {
+          console.error('❌ Stderr:', data.toString().trim())
+        })
+      }
+
+      // Aguardar fim do processo
+      await new Promise((resolve, reject) => {
+        ytDlpProcess.on('close', (code) => {
+          if (code === 0) resolve()
+          else reject(new Error(`yt-dlp erro: código ${code}`))
+        })
+        ytDlpProcess.on('error', (err) => reject(err))
+      })
 
       console.log(`✅ Download completo: ${filename}`)
 
-      // Verificar se o arquivo existe
+      // Verificar arquivo (mantido)
       if (!fs.existsSync(outputPath)) {
         throw new Error('Arquivo não foi criado')
       }
 
-      // Obter tamanho do arquivo
       const stats = fs.statSync(outputPath)
       const fileSize = stats.size
 
       console.log(`📦 Tamanho: ${(fileSize / 1024 / 1024).toFixed(2)} MB`)
 
-      // Salvar vídeo no banco
+      // Salvar vídeo no banco (mantido)
       const { error: videoError } = await supabase
         .from('downloaded_videos')
         .insert({
@@ -301,9 +354,9 @@ async function processDownloads(jobId, urls, userId) {
       }
 
       const result = {
-        url: url,
+        url,
         title: videoInfo.title,
-        filename: filename,
+        filename,
         downloadUrl: `/downloads/${filename}`,
         status: 'success',
         platform: videoInfo.extractor_key || 'Unknown',
@@ -313,47 +366,37 @@ async function processDownloads(jobId, urls, userId) {
       job.results.push(result)
       job.completed++
 
-      // Atualizar job no banco
       await supabase
         .from('download_jobs')
-        .update({
-          completed_videos: job.completed
-        })
+        .update({ completed_videos: job.completed })
         .eq('id', jobId)
-
     } catch (error) {
       console.error(`❌ Erro ao baixar ${url}:`, error.message)
-      console.error('Stack:', error.stack)
-      
-      // Salvar erro no banco
-      await supabase
-        .from('downloaded_videos')
-        .insert({
-          job_id: jobId,
-          user_id: userId,
-          title: 'Erro',
-          original_url: url,
-          filename: '',
-          file_path: '',
-          platform: 'Unknown',
-          status: 'error',
-          error_message: error.message
-        })
+
+      // Salvar erro no banco (mantido)
+      await supabase.from('downloaded_videos').insert({
+        job_id: jobId,
+        user_id: userId,
+        title: 'Erro',
+        original_url: url,
+        filename: '',
+        file_path: '',
+        platform: 'Unknown',
+        status: 'error',
+        error_message: error.message
+      })
 
       job.results.push({
-        url: url,
+        url,
         title: 'Erro',
         status: 'error',
         error: error.message
       })
       job.completed++
 
-      // Atualizar job no banco
       await supabase
         .from('download_jobs')
-        .update({
-          completed_videos: job.completed
-        })
+        .update({ completed_videos: job.completed })
         .eq('id', jobId)
     }
   }
@@ -362,7 +405,6 @@ async function processDownloads(jobId, urls, userId) {
   job.current = null
   job.progress = 100
 
-  // Finalizar job no banco
   await supabase
     .from('download_jobs')
     .update({
@@ -373,6 +415,4 @@ async function processDownloads(jobId, urls, userId) {
     .eq('id', jobId)
 
   console.log('\n✅ Todos os downloads processados!')
-  console.log(`✅ Sucesso: ${job.results.filter(r => r.status === 'success').length}`)
-  console.log(`❌ Erros: ${job.results.filter(r => r.status === 'error').length}`)
 }

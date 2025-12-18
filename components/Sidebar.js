@@ -10,33 +10,27 @@ export default function Sidebar() {
   const router = useRouter()
   const pathname = usePathname()
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadUserData()
-  }, [])
-
-  const loadUserData = async () => {
-    try {
-      const response = await fetch('/api/auth/me')
-      if (response.ok) {
-        const data = await response.json()
-        setUser(data.user)
-      } else {
-        router.push('/')
-      }
-    } catch (error) {
-      console.error('Error loading user:', error)
-      router.push('/')
-    } finally {
-      setLoading(false)
+    // Buscar user do localStorage (instantâneo)
+    const userData = localStorage.getItem('francaverso_user')
+    if (userData) {
+      setUser(JSON.parse(userData))
     }
-  }
+  }, [])
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
+      // Deletar cookie
+      document.cookie = 'francaverso_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+      
+      // Deletar localStorage
       localStorage.removeItem('francaverso_user')
+      
+      // Chamar API de logout
+      await fetch('/api/auth/logout', { method: 'POST' })
+      
+      // Redirecionar
       router.push('/')
       router.refresh()
     } catch (error) {
@@ -46,14 +40,6 @@ export default function Sidebar() {
 
   const handleHelpDesk = () => {
     window.open('https://wa.me/5521975368618', '_blank', 'noopener,noreferrer')
-  }
-
-  if (loading) {
-    return (
-      <aside className="w-64 bg-franca-blue min-h-screen p-6 flex items-center justify-center">
-        <div className="text-white">Carregando...</div>
-      </aside>
-    )
   }
 
   return (
@@ -90,7 +76,6 @@ export default function Sidebar() {
                 <p className="text-franca-green-light text-xs">{user.role}</p>
               </div>
             </div>
-            {/* Notificações no card */}
             <NotificationBell />
           </div>
         </div>
