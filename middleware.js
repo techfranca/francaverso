@@ -1,21 +1,36 @@
 import { NextResponse } from 'next/server'
 
 export function middleware(request) {
-  // Middleware simples - a autenticação real é feita no client-side com localStorage
-  // Este middleware pode ser expandido para autenticação mais robusta no futuro
+  const { pathname } = request.nextUrl
   
+  // Rotas públicas
+  const publicPaths = ['/', '/api/auth/login']
+  
+  // Se for rota pública, permitir
+  if (publicPaths.includes(pathname)) {
+    return NextResponse.next()
+  }
+
+  // Verificar se tem sessão
+  const session = request.cookies.get('francaverso_session')
+
+  // Se não tiver sessão e tentar acessar rota protegida, redirecionar para login
+  if (!session && pathname.startsWith('/dashboard')) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+
+  // Se tiver sessão e tentar acessar login, redirecionar para dashboard
+  if (session && pathname === '/') {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
   return NextResponse.next()
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+    '/',
+    '/dashboard/:path*',
+    '/api/:path*'
+  ]
 }

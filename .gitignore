@@ -24,6 +24,7 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
 
 # vercel
 .vercel
@@ -31,3 +32,23 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ============================================
+# FRANCAVERSO - Arquivos específicos do projeto
+# ============================================
+
+# yt-dlp executável (não subir binário pro Git)
+bin/yt-dlp.exe
+bin/yt-dlp
+
+# Downloads de vídeos (não subir vídeos pro Git)
+public/downloads/*
+!public/downloads/.gitkeep
+
+# Fotos de perfil locais (se usar storage local)
+public/profiles/*
+!public/profiles/.gitkeep
+
+# Logs personalizados
+logs/
+*.log

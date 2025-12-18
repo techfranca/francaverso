@@ -3,21 +3,17 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
-import { Sparkles, ArrowRight } from 'lucide-react'
+import { Sparkles, ArrowRight, Loader } from 'lucide-react'
 import Link from 'next/link'
 
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState(null)
   const [currentTime, setCurrentTime] = useState('')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const userData = localStorage.getItem('francaverso_user')
-    if (!userData) {
-      router.push('/')
-      return
-    }
-    setUser(JSON.parse(userData))
+    loadUserData()
 
     // Update time
     const updateTime = () => {
@@ -36,6 +32,37 @@ export default function DashboardPage() {
     const interval = setInterval(updateTime, 60000)
     return () => clearInterval(interval)
   }, [router])
+
+  const loadUserData = async () => {
+    try {
+      const response = await fetch('/api/auth/me')
+      if (response.ok) {
+        const data = await response.json()
+        setUser(data.user)
+      } else {
+        router.push('/')
+      }
+    } catch (error) {
+      console.error('Error loading user:', error)
+      router.push('/')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+  <div>
+    {/* conteúdo direto, sem wrapper */}
+    <div className="mb-8">
+      <h1 className="text-3xl font-bold text-franca-blue mb-2">
+        Bem-vindo ao Francaverso
+      </h1>
+      {/* resto do conteúdo */}
+    </div>
+  </div>
+)
+  }
 
   if (!user) return null
 
@@ -68,7 +95,7 @@ export default function DashboardPage() {
             {/* Logo 3D-ish */}
             <div className="relative text-center mb-8">
               <div className="inline-block transform hover:scale-110 transition-all duration-500">
-                <img src="/logo.png" alt="Franca Logo" width="60" height="60" className="drop-shadow-lg" />
+                <img src="/logo.png" alt="Franca Logo" width="120" height="120" className="drop-shadow-2xl animate-float" />
               </div>
             </div>
           </div>
@@ -119,7 +146,7 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Ferramentas</span>
-                  <span className="font-bold text-franca-green">12</span>
+                  <span className="font-bold text-franca-green">13</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Status</span>

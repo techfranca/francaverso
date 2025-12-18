@@ -1,37 +1,59 @@
 'use client'
 
-import { Home, Layers, HelpCircle, LogOut, User, Settings } from 'lucide-react'
+import { Home, Layers, HelpCircle, LogOut, User, Settings, Users, GraduationCap } from 'lucide-react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import NotificationBell from '@/components/NotificationBell'
 
 export default function Sidebar() {
   const router = useRouter()
   const pathname = usePathname()
   const [user, setUser] = useState(null)
-  const [profilePhoto, setProfilePhoto] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const userData = localStorage.getItem('francaverso_user')
-    if (userData) {
-      const parsedUser = JSON.parse(userData)
-      setUser(parsedUser)
-      
-      // Carregar foto do perfil ESPECÍFICA DO USUÁRIO
-      const savedPhoto = localStorage.getItem(`francaverso_profile_photo_${parsedUser.name}`)
-      if (savedPhoto) {
-        setProfilePhoto(savedPhoto)
-      }
-    }
+    loadUserData()
   }, [])
 
-  const handleLogout = () => {
-    localStorage.removeItem('francaverso_user')
-    router.push('/')
+  const loadUserData = async () => {
+    try {
+      const response = await fetch('/api/auth/me')
+      if (response.ok) {
+        const data = await response.json()
+        setUser(data.user)
+      } else {
+        router.push('/')
+      }
+    } catch (error) {
+      console.error('Error loading user:', error)
+      router.push('/')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      localStorage.removeItem('francaverso_user')
+      router.push('/')
+      router.refresh()
+    } catch (error) {
+      console.error('Error logging out:', error)
+    }
   }
 
   const handleHelpDesk = () => {
     window.open('https://wa.me/5521975368618', '_blank', 'noopener,noreferrer')
+  }
+
+  if (loading) {
+    return (
+      <aside className="w-64 bg-franca-blue min-h-screen p-6 flex items-center justify-center">
+        <div className="text-white">Carregando...</div>
+      </aside>
+    )
   }
 
   return (
@@ -47,25 +69,29 @@ export default function Sidebar() {
         <div className="h-1 w-12 bg-franca-green rounded-full"></div>
       </div>
 
-      {/* User Info */}
+      {/* User Info + Notificações */}
       {user && (
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 mb-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-franca-green rounded-full flex items-center justify-center overflow-hidden">
-              {profilePhoto ? (
-                <img 
-                  src={profilePhoto} 
-                  alt="Profile" 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User size={20} className="text-franca-blue" />
-              )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-franca-green rounded-full flex items-center justify-center overflow-hidden">
+                {user.profile_photo_url ? (
+                  <img 
+                    src={user.profile_photo_url} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User size={20} className="text-franca-blue" />
+                )}
+              </div>
+              <div>
+                <p className="text-white font-semibold text-sm">{user.name}</p>
+                <p className="text-franca-green-light text-xs">{user.role}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-white font-semibold text-sm">{user.name}</p>
-              <p className="text-franca-green-light text-xs">{user.role}</p>
-            </div>
+            {/* Notificações no card */}
+            <NotificationBell />
           </div>
         </div>
       )}
@@ -104,10 +130,42 @@ export default function Sidebar() {
             } group-hover:scale-110 transition-transform`} />
             <span className="font-medium">Ferramentas</span>
           </Link>
+
+          <Link 
+            href="/dashboard/membros"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all group ${
+              pathname === '/dashboard/membros' 
+                ? 'bg-franca-green text-franca-blue' 
+                : 'text-white hover:bg-white/10'
+            }`}
+          >
+            <Users size={20} className={`${
+              pathname === '/dashboard/membros' 
+                ? 'text-franca-blue' 
+                : 'text-franca-green'
+            } group-hover:scale-110 transition-transform`} />
+            <span className="font-medium">Membros</span>
+          </Link>
+
+          <Link 
+            href="/dashboard/academia"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all group ${
+              pathname === '/dashboard/academia' 
+                ? 'bg-franca-green text-franca-blue' 
+                : 'text-white hover:bg-white/10'
+            }`}
+          >
+            <GraduationCap size={20} className={`${
+              pathname === '/dashboard/academia' 
+                ? 'text-franca-blue' 
+                : 'text-franca-green'
+            } group-hover:scale-110 transition-transform`} />
+            <span className="font-medium">Academia</span>
+          </Link>
         </div>
       </nav>
 
-      {/* GERAL Section - Agora lá embaixo */}
+      {/* GERAL Section */}
       <div className="mt-auto">
         <p className="text-franca-green-light text-xs font-semibold uppercase tracking-wider mb-3 px-4">
           Geral
@@ -151,7 +209,7 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="mt-6 pt-6 border-t border-white/10">
         <p className="text-franca-green-light text-xs text-center">
-          Versão 1.0.0
+          Versão 2.0.0
         </p>
       </div>
     </aside>

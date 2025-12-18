@@ -2,127 +2,163 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { LogIn } from 'lucide-react'
+import { ChevronDown, LogIn, Loader } from 'lucide-react'
 
 const users = [
-  { name: 'GABRIEL', role: 'CEO' },
-  { name: 'BRUNA', role: 'SOCIAL MEDIA MANAGER' },
-  { name: 'LEONARDO', role: 'GESTOR DE TRÁFEGO' },
-  { name: 'GUILHERME', role: 'DESIGN LEAD' },
-  { name: 'DAVIDSON', role: 'TECH LEAD' },
+  { id: '00000000-0000-0000-0000-000000000001', name: 'GABRIEL', role: 'CEO' },
+  { id: '00000000-0000-0000-0000-000000000002', name: 'BRUNA', role: 'SOCIAL MEDIA MANAGER' },
+  { id: '00000000-0000-0000-0000-000000000003', name: 'LEONARDO', role: 'GESTOR DE TRÁFEGO' },
+  { id: '00000000-0000-0000-0000-000000000004', name: 'GUILHERME', role: 'DESIGN LEAD' },
+  { id: '00000000-0000-0000-0000-000000000005', name: 'DAVIDSON', role: 'TECH LEAD' },
 ]
 
 export default function LoginPage() {
+  const router = useRouter()
   const [selectedUser, setSelectedUser] = useState('')
   const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const router = useRouter()
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
-    
+    setError('')
+
     if (!selectedUser) {
       setError('Por favor, selecione um usuário')
       return
     }
 
-    if (password !== 'franca@2025') {
-      setError('Senha incorreta')
+    if (!password) {
+      setError('Por favor, digite a senha')
       return
     }
 
-    const user = users.find(u => u.name === selectedUser)
-    localStorage.setItem('francaverso_user', JSON.stringify(user))
-    router.push('/dashboard')
+    setLoading(true)
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedUser,
+          password: password
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Erro ao fazer login')
+        return
+      }
+
+      // Salvar sessão localmente também (fallback)
+      localStorage.setItem('francaverso_user', JSON.stringify(data.user))
+
+      // Redirecionar para dashboard
+      router.push('/dashboard')
+      router.refresh()
+
+    } catch (error) {
+      console.error('Erro no login:', error)
+      setError('Erro ao conectar com o servidor')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      {/* Formas geométricas de fundo */}
+    <div className="min-h-screen bg-gradient-to-br from-franca-green-light to-franca-blue-light flex items-center justify-center p-4">
+      {/* Elementos decorativos de fundo */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-32 h-32 bg-franca-green/20 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute bottom-20 right-10 w-40 h-40 bg-franca-green-dark/20 rounded-full blur-3xl animate-float" style={{animationDelay: '1s'}}></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-franca-blue/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-20 left-10 w-72 h-72 bg-franca-green/20 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-franca-green-dark/20 rounded-full blur-3xl animate-float" style={{animationDelay: '1s'}}></div>
       </div>
 
-      <div className="w-full max-w-md relative z-10">
-        {/* Logo/Header */}
-        <div className="text-center mb-8 animate-fadeIn">
-          <div className="inline-block">
-            <div className="flex items-center justify-center space-x-3 mb-4">
-              <img src="/logo.png" alt="Franca Logo" width="60" height="60" className="drop-shadow-lg" />
-              <h1 className="text-4xl font-bold text-franca-blue">FRANCAVERSO</h1>
-            </div>
-            <p className="text-franca-green-dark text-sm font-medium">Portal de Ferramentas e Sistemas</p>
+      {/* Card de Login */}
+      <div className="relative bg-white rounded-3xl shadow-2xl p-8 md:p-12 max-w-md w-full animate-fadeIn">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-block mb-4">
+            <img src="/logo.png" alt="Franca Logo" width="80" height="80" className="drop-shadow-lg animate-float" />
           </div>
+          <h1 className="text-3xl font-bold text-franca-blue mb-2">FRANCAVERSO</h1>
+          <p className="text-gray-600">Portal de Ferramentas Franca</p>
         </div>
 
-        {/* Card de Login */}
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-franca-green/20 animate-fadeIn" style={{animationDelay: '0.2s'}}>
-          <h2 className="text-2xl font-semibold text-franca-blue mb-6 text-center">Bem-vindo de volta! 👋</h2>
-          
-          <form onSubmit={handleLogin} className="space-y-5">
-            {/* Select de Usuário */}
-            <div>
-              <label className="block text-sm font-medium text-franca-blue mb-2">
-                Selecione seu usuário
-              </label>
+        {/* Formulário */}
+        <form onSubmit={handleLogin} className="space-y-6">
+          {/* Select de Usuário */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Selecione seu usuário
+            </label>
+            <div className="relative">
               <select
                 value={selectedUser}
-                onChange={(e) => {
-                  setSelectedUser(e.target.value)
-                  setError('')
-                }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-franca-green focus:border-transparent transition-all bg-white text-franca-blue"
+                onChange={(e) => setSelectedUser(e.target.value)}
+                disabled={loading}
+                className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-franca-green focus:border-transparent appearance-none transition-all bg-white disabled:opacity-50"
               >
-                <option value="">-- Escolha seu nome --</option>
+                <option value="">Escolha um usuário...</option>
                 {users.map((user) => (
-                  <option key={user.name} value={user.name}>
+                  <option key={user.id} value={user.id}>
                     {user.name} - {user.role}
                   </option>
                 ))}
               </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
             </div>
+          </div>
 
-            {/* Input de Senha */}
-            <div>
-              <label className="block text-sm font-medium text-franca-blue mb-2">
-                Senha
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value)
-                  setError('')
-                }}
-                placeholder="Digite sua senha"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-franca-green focus:border-transparent transition-all"
-              />
+          {/* Campo de Senha */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Senha
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              placeholder="Digite a senha"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-franca-green focus:border-transparent transition-all disabled:opacity-50"
+            />
+          </div>
+
+          {/* Mensagem de Erro */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
             </div>
+          )}
 
-            {/* Mensagem de Erro */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
+          {/* Botão de Login */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-franca-green to-franca-green-hover text-franca-blue font-semibold py-3 px-6 rounded-lg hover:shadow-lg transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+          >
+            {loading ? (
+              <>
+                <Loader size={20} className="mr-2 animate-spin" />
+                Entrando...
+              </>
+            ) : (
+              <>
+                <LogIn size={20} className="mr-2" />
+                Entrar
+              </>
             )}
-
-            {/* Botão de Login */}
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-franca-green to-franca-green-hover text-franca-blue font-semibold py-3 px-6 rounded-lg hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 flex items-center justify-center space-x-2"
-            >
-              <LogIn size={20} />
-              <span>Entrar no Francaverso</span>
-            </button>
-          </form>
-        </div>
+          </button>
+        </form>
 
         {/* Footer */}
-        <p className="text-center text-franca-blue/60 text-sm mt-6 animate-fadeIn" style={{animationDelay: '0.4s'}}>
-          © 2024 Franca. Todos os direitos reservados.
-        </p>
+        <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+          <p className="text-xs text-gray-500">
+            Desenvolvido com 💚 pela equipe Franca
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -6,7 +6,8 @@ import Sidebar from '@/components/Sidebar'
 import ToolCard from '@/components/ToolCard'
 import { 
   FileText, 
-  Upload, 
+  Upload,
+  Download,
   MessageSquare, 
   Bot, 
   FolderOpen, 
@@ -20,7 +21,9 @@ import {
   Home,
   Cpu,
   Folder,
-  Layers
+  Layers,
+  FileCheck,
+  Image
 } from 'lucide-react'
 
 const tools = {
@@ -37,11 +40,18 @@ const tools = {
       url: 'https://franca-flow.vercel.app/api/admin',
       icon: Upload,
     },
+    {
+      name: 'Video Downloader',
+      description: 'Baixe vídeos do YouTube, TikTok, Instagram e mais de 1000 sites',
+      url: '/dashboard/downloader',
+      icon: Download,
+      isInternal: true
+    },
   ],
   ia: [
     {
       name: 'ChatGPT',
-      description: 'Inteligência artificial para produtividade e criação de conteúdo',
+      description: 'Inteligência artificial da OpenAI para produtividade e criação de conteúdo',
       url: 'https://chatgpt.com/',
       icon: MessageSquare,
     },
@@ -82,6 +92,18 @@ const tools = {
       description: 'Backend as a Service - banco de dados e autenticação',
       url: 'https://supabase.com/',
       icon: Database,
+    },
+    {
+      name: 'Autentique',
+      description: 'Plataforma de assinatura digital de documentos com validade jurídica',
+      url: 'https://painel.autentique.com.br/documentos/todos',
+      icon: FileCheck,
+    },
+    {
+      name: 'Freepik',
+      description: 'Banco de imagens, vetores, ícones e recursos gráficos para designers',
+      url: 'https://br.freepik.com/',
+      icon: Image,
     },
   ],
   automacao: [
@@ -151,7 +173,7 @@ export default function FerramentasPage() {
         <div className="grid grid-cols-3 gap-4 mb-8 animate-fadeIn" style={{animationDelay: '0.1s'}}>
           <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-franca-green/20">
             <p className="text-xs text-gray-600 mb-1">Ferramentas</p>
-            <p className="text-2xl font-bold text-franca-green">12</p>
+            <p className="text-2xl font-bold text-franca-green">15</p>
           </div>
           <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-franca-blue/20">
             <p className="text-xs text-gray-600 mb-1">Disponibilidade</p>
@@ -203,20 +225,14 @@ export default function FerramentasPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {currentTools.map((tool, index) => (
-              <div 
-                key={tool.name} 
-                className="animate-fadeIn" 
-                style={{animationDelay: `${0.4 + index * 0.1}s`}}
-              >
-                <ToolCard {...tool} color="franca-green" />
-              </div>
+              <ToolCard key={tool.name} {...tool} color="franca-green" />
             ))}
           </div>
         </div>
 
         {/* Footer */}
         <footer className="mt-16 pt-8 border-t border-gray-200 text-center text-gray-500 text-sm">
-          <p>© 2025 Franca. Desenvolvido pela equipe de tecnologia.</p>
+          <p>© 2025 Franca. Desenvolvido com 💚 pela equipe de tecnologia.</p>
         </footer>
       </main>
     </div>

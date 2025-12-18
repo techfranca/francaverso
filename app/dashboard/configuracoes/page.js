@@ -3,74 +3,231 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
-import { Camera, Check, User } from 'lucide-react'
+import { Camera, Check, User, Mail, Phone, FileText, Loader, Image } from 'lucide-react'
 
 export default function ConfiguracoesPage() {
   const router = useRouter()
   const [user, setUser] = useState(null)
-  const [profilePhoto, setProfilePhoto] = useState(null)
-  const [previewPhoto, setPreviewPhoto] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [uploadingBanner, setUploadingBanner] = useState(false)
   const [saved, setSaved] = useState(false)
 
+  // Campos do perfil
+  const [bio, setBio] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+
   useEffect(() => {
-    const userData = localStorage.getItem('francaverso_user')
-    if (!userData) {
-      router.push('/')
+    loadProfile()
+  }, [])
+
+  const loadProfile = async () => {
+    try {
+      const response = await fetch('/api/profile')
+      if (response.ok) {
+        const data = await response.json()
+        setUser(data.user)
+        
+        // Preencher campos
+        setBio(data.user.bio || '')
+        setEmail(data.user.email || '')
+        setPhone(data.user.phone || '')
+      } else {
+        router.push('/')
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleBannerChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Validações
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione apenas imagens!')
       return
     }
-    const parsedUser = JSON.parse(userData)
-    setUser(parsedUser)
 
-    // Carregar foto atual ESPECÍFICA DO USUÁRIO
-    const savedPhoto = localStorage.getItem(`francaverso_profile_photo_${parsedUser.name}`)
-    if (savedPhoto) {
-      setProfilePhoto(savedPhoto)
-      setPreviewPhoto(savedPhoto)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('A imagem é muito grande! Tamanho máximo: 10MB')
+      return
     }
-  }, [router])
 
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      // Validar tipo de arquivo
-      if (!file.type.startsWith('image/')) {
-        alert('Por favor, selecione apenas imagens!')
-        return
+    setUploadingBanner(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('banner', file)
+
+      const response = await fetch('/api/profile/banner', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao fazer upload')
       }
 
-      // Validar tamanho (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('A imagem é muito grande! Tamanho máximo: 5MB')
-        return
-      }
+      // Atualizar banner
+      setUser(prev => ({ ...prev, banner_url: data.bannerUrl }))
+      
+      alert('Banner atualizado com sucesso!')
+      
+      // Recarregar página
+      window.location.reload()
 
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreviewPhoto(reader.result)
-      }
-      reader.readAsDataURL(file)
+    } catch (error) {
+      console.error('Upload error:', error)
+      alert(error.message)
+    } finally {
+      setUploadingBanner(false)
     }
   }
 
-  const handleSavePhoto = () => {
-    if (previewPhoto && user) {
-      localStorage.setItem(`francaverso_profile_photo_${user.name}`, previewPhoto)
-      setProfilePhoto(previewPhoto)
+  const handleRemoveBanner = async () => {
+    if (!confirm('Tem certeza que deseja remover seu banner?')) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/profile/banner', {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao remover banner')
+      }
+
+      setUser(prev => ({ ...prev, banner_url: null }))
+      alert('Banner removido com sucesso!')
+      window.location.reload()
+
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert(error.message)
+    }
+  }
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Validações
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione apenas imagens!')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('A imagem é muito grande! Tamanho máximo: 5MB')
+      return
+    }
+
+    setUploadingPhoto(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('photo', file)
+
+      const response = await fetch('/api/profile/photo', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao fazer upload')
+      }
+
+      // Atualizar foto
+      setUser(prev => ({ ...prev, profile_photo_url: data.photoUrl }))
+      
+      alert('Foto atualizada com sucesso!')
+      
+      // Recarregar sidebar
+      window.location.reload()
+
+    } catch (error) {
+      console.error('Upload error:', error)
+      alert(error.message)
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
+  const handleRemovePhoto = async () => {
+    if (!confirm('Tem certeza que deseja remover sua foto?')) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/profile/photo', {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao remover foto')
+      }
+
+      setUser(prev => ({ ...prev, profile_photo_url: null }))
+      alert('Foto removida com sucesso!')
+      window.location.reload()
+
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert(error.message)
+    }
+  }
+
+  const handleSaveInfo = async () => {
+    setSaving(true)
+
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bio,
+          email,
+          phone
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao salvar')
+      }
+
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
-      
-      // Recarregar a página para atualizar a sidebar
-      window.location.reload()
+
+    } catch (error) {
+      console.error('Save error:', error)
+      alert(error.message)
+    } finally {
+      setSaving(false)
     }
   }
 
-  const handleRemovePhoto = () => {
-    if (user) {
-      localStorage.removeItem(`francaverso_profile_photo_${user.name}`)
-      setProfilePhoto(null)
-      setPreviewPhoto(null)
-      window.location.reload()
-    }
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-franca-green-light to-franca-blue-light">
+        <Sidebar />
+        <main className="flex-1 p-8 flex items-center justify-center">
+          <Loader size={48} className="text-franca-green animate-spin" />
+        </main>
+      </div>
+    )
   }
 
   if (!user) return null
@@ -90,8 +247,92 @@ export default function ConfiguracoesPage() {
           </p>
         </div>
 
-        {/* Card de Foto de Perfil */}
-        <div className="max-w-2xl">
+        <div className="max-w-4xl space-y-6">
+          {/* Card de Banner Personalizado - NOVO! */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 animate-fadeIn" style={{animationDelay: '0.05s'}}>
+            <h2 className="text-xl font-semibold text-franca-blue mb-6 flex items-center">
+              <Image className="mr-2 text-franca-green" size={24} />
+              Banner Personalizado
+            </h2>
+
+            <div className="space-y-6">
+              {/* Preview do Banner */}
+              <div className="relative w-full h-48 rounded-xl overflow-hidden bg-gradient-to-r from-franca-green to-franca-green-hover">
+                {user.banner_url ? (
+                  <img 
+                    src={user.banner_url} 
+                    alt="Banner Preview" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <p className="text-franca-blue/50 text-sm">Nenhum banner configurado</p>
+                  </div>
+                )}
+                
+                {/* Foto de perfil sobreposta (preview) */}
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
+                  <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center overflow-hidden ring-4 ring-white shadow-lg">
+                    {user.profile_photo_url ? (
+                      <img 
+                        src={user.profile_photo_url} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User size={32} className="text-franca-blue" />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Botões de ação */}
+              <div className="flex gap-3 pt-6">
+                <label 
+                  htmlFor="banner-upload" 
+                  className={`flex-1 flex items-center justify-center px-6 py-3 bg-gradient-to-r from-franca-green to-franca-green-hover text-franca-blue font-semibold rounded-lg cursor-pointer hover:shadow-lg transition-all transform hover:scale-105 ${uploadingBanner ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {uploadingBanner ? (
+                    <>
+                      <Loader size={20} className="mr-2 animate-spin" />
+                      Fazendo Upload...
+                    </>
+                  ) : (
+                    <>
+                      <Camera size={20} className="mr-2" />
+                      Escolher Banner
+                    </>
+                  )}
+                </label>
+                <input
+                  id="banner-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBannerChange}
+                  disabled={uploadingBanner}
+                  className="hidden"
+                />
+
+                {user.banner_url && (
+                  <button
+                    onClick={handleRemoveBanner}
+                    disabled={uploadingBanner}
+                    className="px-6 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all disabled:opacity-50"
+                  >
+                    Remover Banner
+                  </button>
+                )}
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-700">
+                  <strong>💡 Dica:</strong> Use imagens com proporção 3:1 (ex: 1200x400px) para melhor resultado!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Card de Foto de Perfil */}
           <div className="bg-white rounded-2xl shadow-lg p-8 animate-fadeIn" style={{animationDelay: '0.1s'}}>
             <h2 className="text-xl font-semibold text-franca-blue mb-6 flex items-center">
               <Camera className="mr-2 text-franca-green" size={24} />
@@ -99,12 +340,11 @@ export default function ConfiguracoesPage() {
             </h2>
 
             <div className="flex flex-col md:flex-row items-center gap-8">
-              {/* Preview da Foto */}
               <div className="flex flex-col items-center">
                 <div className="w-32 h-32 bg-franca-green rounded-full flex items-center justify-center overflow-hidden mb-4 ring-4 ring-franca-green/20">
-                  {previewPhoto ? (
+                  {user.profile_photo_url ? (
                     <img 
-                      src={previewPhoto} 
+                      src={user.profile_photo_url} 
                       alt="Preview" 
                       className="w-full h-full object-cover"
                     />
@@ -112,57 +352,46 @@ export default function ConfiguracoesPage() {
                     <User size={48} className="text-franca-blue" />
                   )}
                 </div>
-                <p className="text-sm text-gray-600 text-center">
-                  {user.name}
-                </p>
+                <p className="text-sm text-gray-600 text-center">{user.name}</p>
               </div>
 
-              {/* Controles */}
               <div className="flex-1">
                 <div className="space-y-4">
                   <div>
                     <label 
                       htmlFor="photo-upload" 
-                      className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-franca-green to-franca-green-hover text-franca-blue font-semibold rounded-lg cursor-pointer hover:shadow-lg transition-all transform hover:scale-105"
+                      className={`inline-flex items-center px-6 py-3 bg-gradient-to-r from-franca-green to-franca-green-hover text-franca-blue font-semibold rounded-lg cursor-pointer hover:shadow-lg transition-all transform hover:scale-105 ${uploadingPhoto ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      <Camera size={20} className="mr-2" />
-                      Escolher Foto
+                      {uploadingPhoto ? (
+                        <>
+                          <Loader size={20} className="mr-2 animate-spin" />
+                          Fazendo Upload...
+                        </>
+                      ) : (
+                        <>
+                          <Camera size={20} className="mr-2" />
+                          Escolher Foto
+                        </>
+                      )}
                     </label>
                     <input
                       id="photo-upload"
                       type="file"
                       accept="image/*"
                       onChange={handlePhotoChange}
+                      disabled={uploadingPhoto}
                       className="hidden"
                     />
                   </div>
 
-                  {previewPhoto && (
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleSavePhoto}
-                        className="flex items-center px-6 py-3 bg-franca-blue text-white font-semibold rounded-lg hover:shadow-lg transition-all"
-                      >
-                        <Check size={20} className="mr-2" />
-                        Salvar Foto
-                      </button>
-
-                      {profilePhoto && (
-                        <button
-                          onClick={handleRemovePhoto}
-                          className="px-6 py-3 bg-red-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
-                        >
-                          Remover Foto
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {saved && (
-                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center">
-                      <Check size={20} className="mr-2" />
-                      Foto salva com sucesso!
-                    </div>
+                  {user.profile_photo_url && (
+                    <button
+                      onClick={handleRemovePhoto}
+                      disabled={uploadingPhoto}
+                      className="px-6 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all disabled:opacity-50"
+                    >
+                      Remover Foto
+                    </button>
                   )}
 
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -170,14 +399,96 @@ export default function ConfiguracoesPage() {
                       <strong>Dicas:</strong>
                     </p>
                     <ul className="text-sm text-gray-600 mt-2 space-y-1">
-                      <li>• Use imagens em formato JPG ou PNG</li>
+                      <li>• Use imagens em formato JPG, PNG ou WEBP</li>
                       <li>• Tamanho máximo: 5MB</li>
-                      <li>• A foto será ajustada automaticamente</li>
-                      <li>• Sua foto fica salva permanentemente no navegador</li>
+                      <li>• A foto será salva na nuvem (Supabase)</li>
                     </ul>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Card de Informações Pessoais */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 animate-fadeIn" style={{animationDelay: '0.2s'}}>
+            <h2 className="text-xl font-semibold text-franca-blue mb-6 flex items-center">
+              <FileText className="mr-2 text-franca-green" size={24} />
+              Informações Pessoais
+            </h2>
+
+            <div className="space-y-4">
+              {/* Bio */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Biografia
+                </label>
+                <textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Conte um pouco sobre você..."
+                  rows={3}
+                  disabled={saving}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-franca-green focus:border-transparent transition-all resize-none disabled:opacity-50"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <Mail size={16} className="mr-2 text-franca-green" />
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu.email@franca.com"
+                  disabled={saving}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-franca-green focus:border-transparent transition-all disabled:opacity-50"
+                />
+              </div>
+
+              {/* Telefone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <Phone size={16} className="mr-2 text-franca-green" />
+                  Telefone
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="(21) 99999-9999"
+                  disabled={saving}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-franca-green focus:border-transparent transition-all disabled:opacity-50"
+                />
+              </div>
+
+              {/* Botão Salvar */}
+              <button
+                onClick={handleSaveInfo}
+                disabled={saving}
+                className="w-full flex items-center justify-center px-6 py-3 bg-gradient-to-r from-franca-green to-franca-green-hover text-franca-blue font-semibold rounded-lg hover:shadow-lg transition-all transform hover:scale-[1.02] disabled:opacity-50"
+              >
+                {saving ? (
+                  <>
+                    <Loader size={20} className="mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Check size={20} className="mr-2" />
+                    Salvar Informações
+                  </>
+                )}
+              </button>
+
+              {saved && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center">
+                  <Check size={20} className="mr-2" />
+                  Informações salvas com sucesso!
+                </div>
+              )}
             </div>
           </div>
         </div>
