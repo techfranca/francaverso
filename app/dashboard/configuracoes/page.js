@@ -73,12 +73,12 @@ export default function ConfiguracoesPage() {
         throw new Error(data.error || 'Erro ao fazer upload')
       }
 
-      // Atualizar banner
+      // Atualizar banner no estado local
       setUser(prev => ({ ...prev, banner_url: data.bannerUrl }))
       
       alert('Banner atualizado com sucesso!')
       
-      // Recarregar página
+      // Recarregar página para garantir consistência
       window.location.reload()
 
     } catch (error) {
@@ -145,12 +145,18 @@ export default function ConfiguracoesPage() {
         throw new Error(data.error || 'Erro ao fazer upload')
       }
 
-      // Atualizar foto
+      // --- CORREÇÃO PARA A SIDEBAR ---
+      // Atualiza o localStorage para que a Sidebar leia a nova foto após o reload
+      const userData = JSON.parse(localStorage.getItem('francaverso_user') || '{}')
+      userData.profile_photo_url = data.photoUrl
+      localStorage.setItem('francaverso_user', JSON.stringify(userData))
+      // -------------------------------
+
       setUser(prev => ({ ...prev, profile_photo_url: data.photoUrl }))
       
       alert('Foto atualizada com sucesso!')
       
-      // Recarregar sidebar
+      // Recarregar para atualizar a Sidebar
       window.location.reload()
 
     } catch (error) {
@@ -174,6 +180,12 @@ export default function ConfiguracoesPage() {
       if (!response.ok) {
         throw new Error('Erro ao remover foto')
       }
+
+      // --- CORREÇÃO PARA A SIDEBAR ---
+      const userData = JSON.parse(localStorage.getItem('francaverso_user') || '{}')
+      userData.profile_photo_url = null
+      localStorage.setItem('francaverso_user', JSON.stringify(userData))
+      // -------------------------------
 
       setUser(prev => ({ ...prev, profile_photo_url: null }))
       alert('Foto removida com sucesso!')
