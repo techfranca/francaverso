@@ -45,7 +45,6 @@ export default function ConfiguracoesPage() {
     const file = e.target.files[0]
     if (!file) return
 
-    // Validações
     if (!file.type.startsWith('image/')) {
       alert('Por favor, selecione apenas imagens!')
       return
@@ -73,12 +72,8 @@ export default function ConfiguracoesPage() {
         throw new Error(data.error || 'Erro ao fazer upload')
       }
 
-      // Atualizar banner no estado local
       setUser(prev => ({ ...prev, banner_url: data.bannerUrl }))
-      
       alert('Banner atualizado com sucesso!')
-      
-      // Recarregar página para garantir consistência
       window.location.reload()
 
     } catch (error) {
@@ -117,7 +112,6 @@ export default function ConfiguracoesPage() {
     const file = e.target.files[0]
     if (!file) return
 
-    // Validações
     if (!file.type.startsWith('image/')) {
       alert('Por favor, selecione apenas imagens!')
       return
@@ -145,18 +139,8 @@ export default function ConfiguracoesPage() {
         throw new Error(data.error || 'Erro ao fazer upload')
       }
 
-      // --- CORREÇÃO PARA A SIDEBAR ---
-      // Atualiza o localStorage para que a Sidebar leia a nova foto após o reload
-      const userData = JSON.parse(localStorage.getItem('francaverso_user') || '{}')
-      userData.profile_photo_url = data.photoUrl
-      localStorage.setItem('francaverso_user', JSON.stringify(userData))
-      // -------------------------------
-
       setUser(prev => ({ ...prev, profile_photo_url: data.photoUrl }))
-      
       alert('Foto atualizada com sucesso!')
-      
-      // Recarregar para atualizar a Sidebar
       window.location.reload()
 
     } catch (error) {
@@ -180,12 +164,6 @@ export default function ConfiguracoesPage() {
       if (!response.ok) {
         throw new Error('Erro ao remover foto')
       }
-
-      // --- CORREÇÃO PARA A SIDEBAR ---
-      const userData = JSON.parse(localStorage.getItem('francaverso_user') || '{}')
-      userData.profile_photo_url = null
-      localStorage.setItem('francaverso_user', JSON.stringify(userData))
-      // -------------------------------
 
       setUser(prev => ({ ...prev, profile_photo_url: null }))
       alert('Foto removida com sucesso!')
@@ -247,7 +225,7 @@ export default function ConfiguracoesPage() {
   return (
     <main className="flex-1 p-8 overflow-y-auto">
       {/* Header */}
-      <div className="mb-8 animate-fadeIn">
+      <div className="mb-8">
         <h1 className="text-3xl font-bold text-franca-blue mb-2">
           Configurações
         </h1>
@@ -258,7 +236,7 @@ export default function ConfiguracoesPage() {
 
       <div className="max-w-4xl space-y-6">
         {/* Card de Banner Personalizado */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 animate-fadeIn" style={{animationDelay: '0.05s'}}>
+        <div className="bg-white rounded-2xl shadow-lg p-8">
           <h2 className="text-xl font-semibold text-franca-blue mb-6 flex items-center">
             <Image className="mr-2 text-franca-green" size={24} />
             Banner Personalizado
@@ -342,7 +320,7 @@ export default function ConfiguracoesPage() {
         </div>
 
         {/* Card de Foto de Perfil */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 animate-fadeIn" style={{animationDelay: '0.1s'}}>
+        <div className="bg-white rounded-2xl shadow-lg p-8">
           <h2 className="text-xl font-semibold text-franca-blue mb-6 flex items-center">
             <Camera className="mr-2 text-franca-green" size={24} />
             Foto de Perfil
@@ -419,7 +397,7 @@ export default function ConfiguracoesPage() {
         </div>
 
         {/* Card de Informações Pessoais */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 animate-fadeIn" style={{animationDelay: '0.2s'}}>
+        <div className="bg-white rounded-2xl shadow-lg p-8">
           <h2 className="text-xl font-semibold text-franca-blue mb-6 flex items-center">
             <FileText className="mr-2 text-franca-green" size={24} />
             Informações Pessoais

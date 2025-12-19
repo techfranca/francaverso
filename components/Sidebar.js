@@ -43,7 +43,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-64 bg-franca-blue min-h-screen p-6 flex flex-col">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-franca-blue p-6 flex flex-col overflow-y-auto">
       {/* Logo */}
       <div className="mb-8">
         <div className="flex items-center space-x-3 mb-2">

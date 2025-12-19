@@ -213,7 +213,7 @@ export default function DownloaderPage() {
   return (
     <main className="flex-1 p-8 overflow-y-auto">
       {/* Header */}
-      <div className="mb-8 animate-fadeIn">
+      <div className="mb-8">
         <h1 className="text-3xl font-bold text-franca-blue mb-2">
           Video Downloader
         </h1>
@@ -223,7 +223,7 @@ export default function DownloaderPage() {
       </div>
 
       {/* Status da API */}
-      <div className="mb-6 animate-fadeIn" style={{animationDelay: '0.1s'}}>
+      <div className="mb-6">
         <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg ${
           apiStatus === 'online' 
             ? 'bg-green-50 border border-green-200' 
@@ -254,7 +254,7 @@ export default function DownloaderPage() {
 
       {/* Card de Download */}
       <div className="max-w-4xl mb-8">
-        <div className="bg-white rounded-2xl shadow-lg p-8 animate-fadeIn" style={{animationDelay: '0.2s'}}>
+        <div className="bg-white rounded-2xl shadow-lg p-8">
           <h2 className="text-xl font-semibold text-franca-blue mb-6 flex items-center">
             <Download className="mr-2 text-franca-green" size={24} />
             Adicionar Links para Download
@@ -378,7 +378,7 @@ export default function DownloaderPage() {
       {/* Resultados */}
       {results.length > 0 && (
         <div className="max-w-4xl mb-8">
-          <div className="bg-white rounded-2xl shadow-lg p-8 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-lg p-8">
             <h2 className="text-xl font-semibold text-franca-blue mb-6">
               Resultados do Download
             </h2>
@@ -433,7 +433,7 @@ export default function DownloaderPage() {
       {/* Histórico */}
       {history.length > 0 && (
         <div className="max-w-4xl">
-          <div className="bg-white rounded-2xl shadow-lg p-8 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-lg p-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-franca-blue">
                 Histórico de Downloads
@@ -490,12 +490,12 @@ export default function DownloaderPage() {
       {showDeleteModal && (
         <>
           <div 
-            className="fixed inset-0 bg-black/50 z-[9998] animate-fadeIn"
+            className="fixed inset-0 bg-black/50 z-[9998]"
             onClick={closeDeleteModal}
           />
 
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-fadeIn">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">

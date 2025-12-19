@@ -36,7 +36,7 @@ export default function MembrosPage() {
   return (
     <main className="flex-1 p-8 overflow-y-auto">
       {/* Header */}
-      <div className="mb-8 animate-fadeIn">
+      <div className="mb-8">
         <h1 className="text-3xl font-bold text-franca-blue mb-2">
           Equipe Franca
         </h1>
@@ -46,7 +46,7 @@ export default function MembrosPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 animate-fadeIn" style={{animationDelay: '0.1s'}}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-franca-green/20">
           <p className="text-xs text-gray-600 mb-1">Total de Membros</p>
           <p className="text-2xl font-bold text-franca-green">{members.length}</p>
@@ -59,11 +59,10 @@ export default function MembrosPage() {
 
       {/* Cards dos Membros */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {members.map((member, index) => (
+        {members.map((member) => (
           <div
             key={member.id}
-            className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-transparent hover:border-franca-green transition-all transform hover:scale-[1.02] animate-fadeIn"
-            style={{animationDelay: `${0.2 + index * 0.1}s`}}
+            className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-transparent hover:border-franca-green transition-all transform hover:scale-[1.02]"
           >
             {/* Header do Card - Banner + Foto */}
             <div className="relative h-32">

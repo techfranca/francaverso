@@ -142,7 +142,7 @@ export default function FerramentasPage() {
   return (
     <main className="flex-1 p-8 overflow-y-auto">
       {/* Header */}
-      <div className="mb-8 animate-fadeIn">
+      <div className="mb-8">
         <h1 className="text-3xl font-bold text-franca-blue mb-2">
           Ferramentas e Sistemas
         </h1>
@@ -152,7 +152,7 @@ export default function FerramentasPage() {
       </div>
 
       {/* Stats compactos */}
-      <div className="grid grid-cols-3 gap-4 mb-8 animate-fadeIn" style={{animationDelay: '0.1s'}}>
+      <div className="grid grid-cols-3 gap-4 mb-8">
         <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-franca-green/20">
           <p className="text-xs text-gray-600 mb-1">Ferramentas</p>
           <p className="text-2xl font-bold text-franca-green">15</p>
@@ -171,7 +171,7 @@ export default function FerramentasPage() {
       </div>
 
       {/* Botões de Categoria */}
-      <div className="mb-8 animate-fadeIn" style={{animationDelay: '0.2s'}}>
+      <div className="mb-8">
         <div className="flex flex-wrap gap-3">
           {categories.map((category) => {
             const Icon = category.icon
@@ -196,7 +196,7 @@ export default function FerramentasPage() {
       </div>
 
       {/* Ferramentas da categoria ativa */}
-      <div className="animate-fadeIn" style={{animationDelay: '0.3s'}}>
+      <div>
         <div className="flex items-center space-x-3 mb-6">
           <div className="w-1 h-8 bg-franca-green rounded-full"></div>
           <h2 className="text-2xl font-bold text-franca-blue">{activeTab?.name}</h2>

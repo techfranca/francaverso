@@ -39,7 +39,7 @@ export default function DashboardPage() {
     <main className="flex-1 p-8 overflow-y-auto flex items-center justify-center">
       <div className="max-w-4xl w-full">
         {/* Animação de Metaverso */}
-        <div className="relative mb-12 animate-fadeIn">
+        <div className="relative mb-12">
           {/* Círculos flutuantes estilo metaverso */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-0 left-1/4 w-32 h-32 bg-franca-green/20 rounded-full blur-3xl animate-float"></div>
@@ -68,7 +68,7 @@ export default function DashboardPage() {
 
         {/* Mensagem de Boas-vindas */}
         {user && (
-          <div className="text-center mb-12 animate-fadeIn" style={{animationDelay: '0.2s'}}>
+          <div className="text-center mb-12">
             <div className="inline-flex items-center space-x-2 bg-franca-green/20 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
               <Sparkles size={16} className="text-franca-green animate-pulse" />
               <span className="text-franca-blue font-medium text-sm">Bem-vindo ao Francaverso</span>
@@ -89,7 +89,7 @@ export default function DashboardPage() {
         )}
 
         {/* Cards de acesso rápido */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-fadeIn" style={{animationDelay: '0.4s'}}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Link href="/dashboard/ferramentas">
             <div className="bg-white/80 backdrop-blur-md rounded-2xl p-6 shadow-lg border-2 border-transparent hover:border-franca-green transition-all cursor-pointer group transform hover:scale-[1.02]">
               <div className="flex items-center justify-between mb-4">
@@ -132,7 +132,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Mensagem motivacional */}
-        <div className="text-center animate-fadeIn" style={{animationDelay: '0.6s'}}>
+        <div className="text-center">
           <div className="bg-gradient-to-r from-franca-green/20 via-franca-green/10 to-transparent rounded-2xl p-6 border-l-4 border-franca-green">
             <p className="text-franca-blue text-lg font-medium italic">
               "Centralizando ferramentas, potencializando resultados."

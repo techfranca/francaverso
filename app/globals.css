@@ -49,7 +49,7 @@ body {
   background: var(--franca-green-hover);
 }
 
-/* Animações suaves */
+/* ❌ ANIMAÇÃO FADEIN REMOVIDA - Elementos aparecem instantaneamente
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -64,8 +64,9 @@ body {
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-out;
 }
+*/
 
-/* Animação de float */
+/* ✅ Animação de float MANTIDA - Usada em logos e elementos decorativos */
 @keyframes float {
   0%, 100% {
     transform: translateY(0px);

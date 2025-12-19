@@ -101,7 +101,7 @@ export default function AcademiaPage() {
 
   return (
     <main className="flex-1 p-8 overflow-y-auto">
-      <div className="mb-8 animate-fadeIn">
+      <div className="mb-8">
         <div className="flex items-center space-x-3 mb-2">
           <div className="w-12 h-12 bg-gradient-to-r from-franca-green to-franca-green-hover rounded-xl flex items-center justify-center">
             <GraduationCap size={24} className="text-franca-blue" />
@@ -113,7 +113,7 @@ export default function AcademiaPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fadeIn">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-franca-green/20">
           <p className="text-xs text-gray-600 mb-1">Total de Cursos</p>
           <p className="text-2xl font-bold text-franca-green">{cursos.length}</p>
@@ -163,9 +163,9 @@ export default function AcademiaPage() {
 
       {selectedCurso && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 animate-fadeIn" onClick={closeModal}></div>
+          <div className="absolute inset-0 bg-black/50" onClick={closeModal}></div>
           
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto animate-fadeIn z-[9999]">
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto z-[9999]">
             <div className="p-6 border-b border-gray-200 sticky top-0 bg-white">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3 flex-1">

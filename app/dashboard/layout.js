@@ -11,9 +11,9 @@ export default function DashboardLayout({ children }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-franca-green-light to-franca-blue-light">
+    <div className="min-h-screen bg-gradient-to-br from-franca-green-light to-franca-blue-light">
       <Sidebar />
-      <div className="flex-1 relative">
+      <div className="ml-64">
         {children}
         <ChatButton />
       </div>
