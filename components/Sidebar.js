@@ -12,12 +12,43 @@ export default function Sidebar() {
   const [user, setUser] = useState(null)
 
   useEffect(() => {
-    // Buscar user do localStorage (instantâneo)
-    const userData = localStorage.getItem('francaverso_user')
-    if (userData) {
-      setUser(JSON.parse(userData))
+    // Buscar user inicial do localStorage
+    loadUser()
+
+    // 🔥 LISTENER para mudanças no localStorage
+    const handleStorageChange = (e) => {
+      if (e.key === 'francaverso_user') {
+        console.log('🔄 Perfil atualizado, recarregando Sidebar...')
+        loadUser()
+      }
+    }
+
+    // Listener para mudanças vindas de outras abas
+    window.addEventListener('storage', handleStorageChange)
+
+    // 🔥 LISTENER CUSTOMIZADO para mudanças na mesma aba
+    const handleCustomUpdate = () => {
+      console.log('🔄 Perfil atualizado (custom event), recarregando Sidebar...')
+      loadUser()
+    }
+
+    window.addEventListener('profile-updated', handleCustomUpdate)
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('profile-updated', handleCustomUpdate)
     }
   }, [])
+
+  const loadUser = () => {
+    const userData = localStorage.getItem('francaverso_user')
+    if (userData) {
+      const parsed = JSON.parse(userData)
+      console.log('👤 User carregado na Sidebar:', parsed.name, parsed.profile_photo_url)
+      setUser(parsed)
+    }
+  }
 
   const handleLogout = async () => {
     try {
@@ -63,6 +94,7 @@ export default function Sidebar() {
               <div className="w-10 h-10 bg-franca-green rounded-full flex items-center justify-center overflow-hidden">
                 {user.profile_photo_url ? (
                   <img 
+                    key={user.profile_photo_url} // Force re-render quando URL muda
                     src={user.profile_photo_url} 
                     alt="Profile" 
                     className="w-full h-full object-cover"

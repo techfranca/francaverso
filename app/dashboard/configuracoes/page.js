@@ -72,7 +72,13 @@ export default function ConfiguracoesPage() {
         throw new Error(data.error || 'Erro ao fazer upload')
       }
 
-      setUser(prev => ({ ...prev, banner_url: data.bannerUrl }))
+      const updatedUser = { ...user, banner_url: data.bannerUrl }
+      setUser(updatedUser)
+      
+      // 🔥 Atualizar localStorage e disparar evento para Sidebar
+      localStorage.setItem('francaverso_user', JSON.stringify(updatedUser))
+      window.dispatchEvent(new Event('profile-updated'))
+      
       alert('Banner atualizado com sucesso!')
       window.location.reload()
 
@@ -98,7 +104,13 @@ export default function ConfiguracoesPage() {
         throw new Error('Erro ao remover banner')
       }
 
-      setUser(prev => ({ ...prev, banner_url: null }))
+      const updatedUser = { ...user, banner_url: null }
+      setUser(updatedUser)
+      
+      // 🔥 Atualizar localStorage e disparar evento para Sidebar
+      localStorage.setItem('francaverso_user', JSON.stringify(updatedUser))
+      window.dispatchEvent(new Event('profile-updated'))
+      
       alert('Banner removido com sucesso!')
       window.location.reload()
 
@@ -139,7 +151,13 @@ export default function ConfiguracoesPage() {
         throw new Error(data.error || 'Erro ao fazer upload')
       }
 
-      setUser(prev => ({ ...prev, profile_photo_url: data.photoUrl }))
+      const updatedUser = { ...user, profile_photo_url: data.photoUrl }
+      setUser(updatedUser)
+      
+      // 🔥 Atualizar localStorage e disparar evento para Sidebar
+      localStorage.setItem('francaverso_user', JSON.stringify(updatedUser))
+      window.dispatchEvent(new Event('profile-updated'))
+      
       alert('Foto atualizada com sucesso!')
       window.location.reload()
 
@@ -165,7 +183,13 @@ export default function ConfiguracoesPage() {
         throw new Error('Erro ao remover foto')
       }
 
-      setUser(prev => ({ ...prev, profile_photo_url: null }))
+      const updatedUser = { ...user, profile_photo_url: null }
+      setUser(updatedUser)
+      
+      // 🔥 Atualizar localStorage e disparar evento para Sidebar
+      localStorage.setItem('francaverso_user', JSON.stringify(updatedUser))
+      window.dispatchEvent(new Event('profile-updated'))
+      
       alert('Foto removida com sucesso!')
       window.location.reload()
 

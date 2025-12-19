@@ -19,13 +19,7 @@ export async function GET() {
       .from('conversations')
       .select(`
         *,
-        conversation_participants!inner(user_id),
-        messages(
-          id,
-          content,
-          created_at,
-          sender:users!messages_sender_id_fkey(id, name, profile_photo_url)
-        )
+        conversation_participants!inner(user_id)
       `)
       .eq('conversation_participants.user_id', sessionUserId)
       .order('updated_at', { ascending: false })
@@ -41,23 +35,20 @@ export async function GET() {
         // Buscar participantes
         const { data: participants } = await supabase
           .from('conversation_participants')
-          .select('user:users(id, name, profile_photo_url)')
+          .select('user:users(id, name, role, profile_photo_url)')
           .eq('conversation_id', conv.id)
 
+        const users = participants?.map(p => p.user) || []
+
         // Última mensagem
-        const lastMessage = conv.messages?.sort((a, b) => 
-          new Date(b.created_at) - new Date(a.created_at)
-        )[0]
+        const { data: messages } = await supabase
+          .from('messages')
+          .select('content, created_at')
+          .eq('conversation_id', conv.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
 
-        // Para chats individuais, pegar o outro usuário
-        let displayName = conv.name
-        let displayPhoto = null
-
-        if (conv.type === 'individual' && participants?.length === 2) {
-          const otherUser = participants.find(p => p.user.id !== sessionUserId)?.user
-          displayName = otherUser?.name
-          displayPhoto = otherUser?.profile_photo_url
-        }
+        const lastMessage = messages?.[0]
 
         // Contar mensagens não lidas
         const { data: lastRead } = await supabase
@@ -74,13 +65,42 @@ export async function GET() {
           .gt('created_at', lastRead?.last_read_at || new Date(0).toISOString())
           .neq('sender_id', sessionUserId)
 
+        // Para chats individuais, separar participant1 e participant2
+        if (conv.type === 'individual' && users.length === 2) {
+          const currentUserIndex = users.findIndex(u => u.id === sessionUserId)
+          const otherUserIndex = currentUserIndex === 0 ? 1 : 0
+
+          return {
+            id: conv.id,
+            type: conv.type,
+            name: conv.name,
+            created_at: conv.created_at,
+            updated_at: conv.updated_at,
+            last_message_at: lastMessage?.created_at || conv.created_at,
+            isGroup: false,
+            participant1_id: users[0].id,
+            participant2_id: users[1].id,
+            participant1: users[0],
+            participant2: users[1],
+            last_message: lastMessage?.content || null,
+            unreadCount: unreadCount || 0,
+            participantCount: 2
+          }
+        }
+
+        // Para grupos
         return {
-          ...conv,
-          participants: participants?.map(p => p.user),
-          lastMessage,
-          displayName,
-          displayPhoto,
-          unreadCount: unreadCount || 0
+          id: conv.id,
+          type: conv.type,
+          name: conv.name,
+          created_at: conv.created_at,
+          updated_at: conv.updated_at,
+          last_message_at: lastMessage?.created_at || conv.created_at,
+          isGroup: true,
+          last_message: lastMessage?.content || null,
+          unreadCount: unreadCount || 0,
+          participantCount: users.length,
+          participants: users
         }
       })
     )
@@ -112,28 +132,42 @@ export async function POST(request) {
       const otherUserId = participantIds[0]
       
       // Buscar conversa existente
-      const { data: existingConv } = await supabase
+      const { data: existingConvs } = await supabase
         .from('conversations')
         .select(`
           *,
-          conversation_participants!inner(user_id)
+          conversation_participants(user_id)
         `)
         .eq('type', 'individual')
-        .in('conversation_participants.user_id', [sessionUserId, otherUserId])
 
-      // Se encontrou, verificar se tem exatamente esses 2 usuários
-      if (existingConv && existingConv.length > 0) {
-        for (const conv of existingConv) {
-          const { data: participants } = await supabase
-            .from('conversation_participants')
-            .select('user_id')
-            .eq('conversation_id', conv.id)
-          
-          const userIds = participants?.map(p => p.user_id).sort()
+      // Verificar se já existe conversa entre esses 2 usuários
+      if (existingConvs && existingConvs.length > 0) {
+        for (const conv of existingConvs) {
+          const userIds = conv.conversation_participants?.map(p => p.user_id).sort()
           const targetIds = [sessionUserId, otherUserId].sort()
           
           if (JSON.stringify(userIds) === JSON.stringify(targetIds)) {
-            return NextResponse.json({ conversation: conv })
+            // Buscar dados completos da conversa
+            const { data: participants } = await supabase
+              .from('conversation_participants')
+              .select('user:users(id, name, role, profile_photo_url)')
+              .eq('conversation_id', conv.id)
+
+            const users = participants?.map(p => p.user) || []
+
+            return NextResponse.json({ 
+              conversation: {
+                id: conv.id,
+                type: conv.type,
+                name: conv.name,
+                isGroup: false,
+                participant1_id: users[0]?.id,
+                participant2_id: users[1]?.id,
+                participant1: users[0],
+                participant2: users[1],
+                participantCount: 2
+              }
+            })
           }
         }
       }
@@ -174,7 +208,33 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Erro ao adicionar participantes' }, { status: 500 })
     }
 
-    return NextResponse.json({ conversation })
+    // Buscar dados completos dos participantes
+    const { data: participants } = await supabase
+      .from('conversation_participants')
+      .select('user:users(id, name, role, profile_photo_url)')
+      .eq('conversation_id', conversation.id)
+
+    const users = participants?.map(p => p.user) || []
+
+    // Retornar no formato esperado pelo frontend
+    const response = {
+      id: conversation.id,
+      type: conversation.type,
+      name: conversation.name,
+      isGroup: type === 'group',
+      participantCount: users.length
+    }
+
+    if (type === 'individual' && users.length === 2) {
+      response.participant1_id = users[0].id
+      response.participant2_id = users[1].id
+      response.participant1 = users[0]
+      response.participant2 = users[1]
+    } else {
+      response.participants = users
+    }
+
+    return NextResponse.json({ conversation: response })
 
   } catch (error) {
     console.error('Conversations POST error:', error)
