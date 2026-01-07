@@ -15,8 +15,11 @@ import {
   ExternalLink,
   Copy,
   Check,
-  ArrowRightCircle
+  AlertTriangle // <--- MUDANÇA: Usando o nome compatível com todas as versões
 } from 'lucide-react'
+
+// ⚠️ Mude para false quando quiser reativar a ferramenta
+const MAINTENANCE_MODE = true
 
 export default function DownloaderPage() {
   const [urls, setUrls] = useState([''])
@@ -63,6 +66,10 @@ export default function DownloaderPage() {
         throw new Error('Você precisa estar logado para baixar vídeos.')
       }
 
+      if (response.status === 503) {
+        throw new Error('Serviço em manutenção temporária.')
+      }
+
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || 'Erro ao processar downloads')
@@ -88,7 +95,6 @@ export default function DownloaderPage() {
     if (result.status === 'redirect' && result.cobaltUrl) {
       window.open(result.cobaltUrl, '_blank')
     } else if (result.status === 'success' && result.downloadUrl) {
-      // Cria um link temporário para forçar o download
       const link = document.createElement('a')
       link.href = result.downloadUrl
       link.download = result.filename || 'video.mp4'
@@ -142,77 +148,93 @@ export default function DownloaderPage() {
         </p>
       </div>
 
-      {/* Input de URLs */}
+      {/* Input de URLs OU Aviso de Manutenção */}
       <div className="max-w-4xl mb-8">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-xl font-semibold text-franca-blue mb-6">
-            Cole os links dos vídeos
-          </h2>
+        {MAINTENANCE_MODE ? (
+          <div className="bg-white rounded-2xl shadow-lg p-12 text-center border-2 border-yellow-100">
+            <div className="w-20 h-20 bg-yellow-50 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              {/* MUDANÇA: Usando AlertTriangle aqui */}
+              <AlertTriangle size={40} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">
+              Serviço em Manutenção
+            </h2>
+            <p className="text-gray-600 max-w-md mx-auto">
+              Estamos realizando ajustes técnicos na nossa integração com as plataformas de vídeo (YouTube/Cobalt). 
+              A ferramenta voltará a funcionar em breve.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <h2 className="text-xl font-semibold text-franca-blue mb-6">
+              Cole os links dos vídeos
+            </h2>
 
-          <div className="space-y-4">
-            {urls.map((url, index) => (
-              <div key={index} className="flex gap-3">
-                <div className="flex-1 relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    {getPlatformIcon(url)}
+            <div className="space-y-4">
+              {urls.map((url, index) => (
+                <div key={index} className="flex gap-3">
+                  <div className="flex-1 relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                      {getPlatformIcon(url)}
+                    </div>
+                    <input
+                      type="url"
+                      value={url}
+                      onChange={(e) => updateUrl(index, e.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-franca-green focus:outline-none transition-all text-gray-700"
+                      disabled={loading}
+                    />
                   </div>
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => updateUrl(index, e.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-franca-green focus:outline-none transition-all text-gray-700"
-                    disabled={loading}
-                  />
+                  
+                  {urls.length > 1 && (
+                    <button
+                      onClick={() => removeUrlField(index)}
+                      className="px-4 py-4 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition-all"
+                      disabled={loading}
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  )}
                 </div>
-                
-                {urls.length > 1 && (
-                  <button
-                    onClick={() => removeUrlField(index)}
-                    className="px-4 py-4 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition-all"
-                    disabled={loading}
-                  >
-                    <Trash2 size={20} />
-                  </button>
+              ))}
+            </div>
+
+            {/* Botões de ação */}
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={addUrlField}
+                className="flex items-center space-x-2 px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all"
+                disabled={loading}
+              >
+                <Plus size={20} />
+                <span>Adicionar Link</span>
+              </button>
+
+              <button
+                onClick={handleDownload}
+                disabled={loading || urls.every(u => !u.trim())}
+                className="flex-1 flex items-center justify-center space-x-3 px-6 py-3 bg-franca-green text-franca-blue font-bold rounded-xl hover:bg-franca-green-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <Loader className="animate-spin" size={20} />
+                    <span>Processando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download size={20} />
+                    <span>Baixar Vídeos</span>
+                  </>
                 )}
-              </div>
-            ))}
+              </button>
+            </div>
           </div>
-
-          {/* Botões de ação */}
-          <div className="flex gap-4 mt-6">
-            <button
-              onClick={addUrlField}
-              className="flex items-center space-x-2 px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all"
-              disabled={loading}
-            >
-              <Plus size={20} />
-              <span>Adicionar Link</span>
-            </button>
-
-            <button
-              onClick={handleDownload}
-              disabled={loading || urls.every(u => !u.trim())}
-              className="flex-1 flex items-center justify-center space-x-3 px-6 py-3 bg-franca-green text-franca-blue font-bold rounded-xl hover:bg-franca-green-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <>
-                  <Loader className="animate-spin" size={20} />
-                  <span>Processando...</span>
-                </>
-              ) : (
-                <>
-                  <Download size={20} />
-                  <span>Baixar Vídeos</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Resultados */}
-      {results.length > 0 && (
+      {results.length > 0 && !MAINTENANCE_MODE && (
         <div className="max-w-4xl pb-10">
           <div className="bg-white rounded-2xl shadow-lg p-8">
             <h2 className="text-xl font-semibold text-franca-blue mb-6">
@@ -267,7 +289,6 @@ export default function DownloaderPage() {
 
                       {isSuccess && (
                         <div className="flex gap-2 flex-shrink-0">
-                          {/* Botão Copiar Link (só mostra se for Local e tiver link) */}
                           {!isRedirect && result.downloadUrl && (
                             <button
                               onClick={() => handleCopyLink(window.location.origin + result.downloadUrl, index)}
@@ -282,7 +303,6 @@ export default function DownloaderPage() {
                             </button>
                           )}
 
-                          {/* Botão Principal de Ação */}
                           <button
                             onClick={() => handleAction(result)}
                             className="flex items-center gap-2 px-4 py-2 bg-franca-green text-franca-blue font-semibold rounded-lg hover:bg-franca-green-hover transition-all"
@@ -307,7 +327,6 @@ export default function DownloaderPage() {
               })}
             </div>
 
-            {/* Rodapé informativo */}
             <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
               <p>
                 <strong>ℹ️ Nota:</strong> Arquivos baixados localmente ficam salvos na pasta <code>public/downloads</code> do projeto.

@@ -15,6 +15,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
+    // TRAVA DE SEGURANÇA: Bloqueia backend na Vercel se necessário
+    // Se quiser travar apenas na Vercel, mantenha o if. Para travar geral, remova o if(isVercel).
+    /* if (isVercel) {
+       return NextResponse.json(
+         { error: 'Serviço temporariamente indisponível para manutenção.' }, 
+         { status: 503 }
+       )
+    }
+    */
+
     const { urls } = await request.json()
 
     if (!urls || !Array.isArray(urls) || urls.length === 0) {
@@ -82,6 +92,7 @@ async function downloadWithYtDlp(url) {
       url,
       '-o', outputTemplate,
       '-f', 'best[height<=720]/best',
+      '-S', 'ext:mp4:m4a', // Prioriza mp4
       '--no-playlist',
       '--print', 'after_move:filepath',
       '--print', 'title',
@@ -111,8 +122,9 @@ async function downloadWithYtDlp(url) {
       }
 
       const lines = output.trim().split('\n')
-      const title = lines[0] || 'Video'
-      const filepath = lines[1] || ''
+      // Ajuste para pegar as linhas corretas (às vezes o yt-dlp cospe mais coisas)
+      const title = lines.find(l => !l.startsWith('/') && !l.includes(':')) || 'Video'
+      const filepath = lines.find(l => l.includes('/') || l.includes('\\')) || ''
       const filename = path.basename(filepath)
 
       resolve({
