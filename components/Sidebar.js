@@ -1,9 +1,11 @@
 'use client'
 
-import { Home, Layers, HelpCircle, LogOut, User, Settings, Users, GraduationCap } from 'lucide-react'
+import { Home, Layers, HelpCircle, LogOut, User, Settings, Users, GraduationCap, Building2 } from 'lucide-react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { auth } from '@/lib/firebase/config'
+import { signOut } from 'firebase/auth'
 
 export default function Sidebar() {
   const router = useRouter()
@@ -51,6 +53,9 @@ export default function Sidebar() {
 
   const handleLogout = async () => {
     try {
+      // Fazer signOut do Firebase
+      await signOut(auth)
+      
       // Deletar cookie
       document.cookie = 'francaverso_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
       
@@ -161,6 +166,22 @@ export default function Sidebar() {
           </Link>
 
           <Link 
+            href="/dashboard/clientes"
+            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all group ${
+              pathname === '/dashboard/clientes' || pathname.startsWith('/dashboard/clientes/')
+                ? 'bg-franca-green text-franca-blue' 
+                : 'text-white hover:bg-white/10'
+            }`}
+          >
+            <Building2 size={20} className={`${
+              pathname === '/dashboard/clientes' || pathname.startsWith('/dashboard/clientes/')
+                ? 'text-franca-blue' 
+                : 'text-franca-green'
+            } group-hover:scale-110 transition-transform`} />
+            <span className="font-medium">Clientes</span>
+          </Link>
+
+          <Link 
             href="/dashboard/academia"
             className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all group ${
               pathname === '/dashboard/academia' 
@@ -222,7 +243,7 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="mt-6 pt-6 border-t border-white/10">
         <p className="text-franca-green-light text-xs text-center">
-          Versão 2.0.0
+          Versão 2.1.0
         </p>
       </div>
     </aside>

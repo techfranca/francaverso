@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 export async function POST() {
   try {
     const cookieStore = cookies()
+    
+    // Deletar cookie de sessão
     cookieStore.delete('francaverso_session')
 
     return NextResponse.json({ success: true })

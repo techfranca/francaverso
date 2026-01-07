@@ -4,10 +4,10 @@ export function middleware(request) {
   const { pathname } = request.nextUrl
   
   // Rotas públicas
-  const publicPaths = ['/', '/api/auth/login']
+  const publicPaths = ['/', '/api/auth/login', '/api/auth/sync', '/api/auth/logout']
   
   // Se for rota pública, permitir
-  if (publicPaths.includes(pathname)) {
+  if (publicPaths.some(path => pathname === path)) {
     return NextResponse.next()
   }
 
