@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
-import ChatButton from '@/components/ChatButton'
 
 export default function DashboardLayout({ children }) {
   const session = cookies().get('francaverso_session')?.value
@@ -15,7 +14,6 @@ export default function DashboardLayout({ children }) {
       <Sidebar />
       <div className="ml-64">
         {children}
-        <ChatButton />
       </div>
     </div>
   )

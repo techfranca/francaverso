@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { 
   Download, 
   Plus, 
@@ -12,84 +12,17 @@ import {
   Youtube,
   Instagram,
   Film,
-  AlertTriangle,
-  X
+  ExternalLink,
+  Copy,
+  Check,
+  ArrowRightCircle
 } from 'lucide-react'
-
-const API_URL = '/api'
 
 export default function DownloaderPage() {
   const [urls, setUrls] = useState([''])
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState([])
-  const [history, setHistory] = useState([])
-  const [apiStatus, setApiStatus] = useState('checking')
-  
-  // Estados de progresso
-  const [currentJob, setCurrentJob] = useState(null)
-  const [jobProgress, setJobProgress] = useState(null)
-
-  // Estados do modal de exclusão
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState(null)
-
-  useEffect(() => {
-    checkApiStatus()
-    loadHistory()
-  }, [])
-
-  // Polling de progresso
-  useEffect(() => {
-    if (!currentJob) return
-
-    const interval = setInterval(async () => {
-      try {
-        const response = await fetch(`${API_URL}/download?jobId=${currentJob}`)
-        if (response.ok) {
-          const data = await response.json()
-          setJobProgress(data)
-
-          if (data.status === 'completed') {
-            setResults(data.results)
-            setLoading(false)
-            setCurrentJob(null)
-            setJobProgress(null)
-            loadHistory()
-            setUrls([''])
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao verificar progresso:', error)
-      }
-    }, 500)
-
-    return () => clearInterval(interval)
-  }, [currentJob])
-
-  const checkApiStatus = async () => {
-    try {
-      const response = await fetch(`${API_URL}/health`)
-      if (response.ok) {
-        setApiStatus('online')
-      } else {
-        setApiStatus('offline')
-      }
-    } catch (error) {
-      setApiStatus('offline')
-    }
-  }
-
-  const loadHistory = async () => {
-    try {
-      const response = await fetch(`${API_URL}/downloads`)
-      if (response.ok) {
-        const data = await response.json()
-        setHistory(data)
-      }
-    } catch (error) {
-      console.error('Erro ao carregar histórico:', error)
-    }
-  }
+  const [copiedIndex, setCopiedIndex] = useState(null)
 
   const addUrlField = () => {
     setUrls([...urls, ''])
@@ -114,17 +47,11 @@ export default function DownloaderPage() {
       return
     }
 
-    if (apiStatus !== 'online') {
-      alert('Backend está offline! Por favor, inicie o servidor backend.')
-      return
-    }
-
     setLoading(true)
     setResults([])
-    setJobProgress(null)
 
     try {
-      const response = await fetch(`${API_URL}/download`, {
+      const response = await fetch('/api/download', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,63 +59,52 @@ export default function DownloaderPage() {
         body: JSON.stringify({ urls: validUrls })
       })
 
+      if (response.status === 401) {
+        throw new Error('Você precisa estar logado para baixar vídeos.')
+      }
+
       if (!response.ok) {
-        throw new Error('Erro ao processar downloads')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao processar downloads')
       }
 
       const data = await response.json()
-      setCurrentJob(data.jobId)
+      setResults(data.results || [])
+      
+      // Limpa os campos apenas se houver sucesso
+      if (data.results.length > 0) {
+        setUrls([''])
+      }
 
     } catch (error) {
       console.error('Erro:', error)
-      alert('Erro ao baixar vídeos: ' + error.message)
+      alert(error.message)
+    } finally {
       setLoading(false)
     }
   }
 
-  const handleDownloadFile = (downloadUrl) => {
-    const filename = downloadUrl.split('/').pop()
-    window.location.href = `/api/downloads/${encodeURIComponent(filename)}`
+  const handleAction = (result) => {
+    if (result.status === 'redirect' && result.cobaltUrl) {
+      window.open(result.cobaltUrl, '_blank')
+    } else if (result.status === 'success' && result.downloadUrl) {
+      // Cria um link temporário para forçar o download
+      const link = document.createElement('a')
+      link.href = result.downloadUrl
+      link.download = result.filename || 'video.mp4'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
   }
 
-  const openDeleteModal = (type, filename = null) => {
-    setDeleteTarget({ type, filename })
-    setShowDeleteModal(true)
-  }
-
-  const closeDeleteModal = () => {
-    setShowDeleteModal(false)
-    setDeleteTarget(null)
-  }
-
-  const confirmDelete = async () => {
-    if (!deleteTarget) return
-
+  const handleCopyLink = async (text, index) => {
     try {
-      if (deleteTarget.type === 'single') {
-        const response = await fetch(`${API_URL}/downloads/${deleteTarget.filename}`, {
-          method: 'DELETE'
-        })
-
-        if (response.ok) {
-          loadHistory()
-          closeDeleteModal()
-        } else {
-          alert('Erro ao deletar arquivo')
-        }
-      } else if (deleteTarget.type === 'all') {
-        const deletePromises = history.map(file => 
-          fetch(`${API_URL}/downloads/${file.filename}`, { method: 'DELETE' })
-        )
-        
-        await Promise.all(deletePromises)
-        loadHistory()
-        closeDeleteModal()
-      }
-    } catch (error) {
-      console.error('Erro ao deletar:', error)
-      alert('Erro ao deletar arquivo(s)')
-      closeDeleteModal()
+      await navigator.clipboard.writeText(text)
+      setCopiedIndex(index)
+      setTimeout(() => setCopiedIndex(null), 2000)
+    } catch (err) {
+      console.error('Erro ao copiar:', err)
     }
   }
 
@@ -203,11 +119,15 @@ export default function DownloaderPage() {
     return <LinkIcon size={20} className="text-gray-500" />
   }
 
-  const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B'
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB'
-    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
-    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB'
+  const getPlatformColor = (platform) => {
+    const colors = {
+      'YouTube': 'bg-red-100 text-red-700',
+      'Instagram': 'bg-pink-100 text-pink-700',
+      'TikTok': 'bg-gray-100 text-gray-700',
+      'Twitter/X': 'bg-blue-100 text-blue-700',
+      'Facebook': 'bg-blue-100 text-blue-700',
+    }
+    return colors[platform] || 'bg-gray-100 text-gray-700'
   }
 
   return (
@@ -218,68 +138,38 @@ export default function DownloaderPage() {
           Video Downloader
         </h1>
         <p className="text-gray-600">
-          Baixe vídeos do YouTube, TikTok, Instagram e mais de 1000 sites
+          Baixe vídeos do YouTube, TikTok, Instagram e mais.
         </p>
       </div>
 
-      {/* Status da API */}
-      <div className="mb-6">
-        <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg ${
-          apiStatus === 'online' 
-            ? 'bg-green-50 border border-green-200' 
-            : apiStatus === 'offline'
-            ? 'bg-red-50 border border-red-200'
-            : 'bg-gray-50 border border-gray-200'
-        }`}>
-          <span className={`w-2 h-2 rounded-full ${
-            apiStatus === 'online' 
-              ? 'bg-green-500 animate-pulse' 
-              : apiStatus === 'offline'
-              ? 'bg-red-500'
-              : 'bg-gray-400'
-          }`}></span>
-          <span className={`text-sm font-medium ${
-            apiStatus === 'online' 
-              ? 'text-green-700' 
-              : apiStatus === 'offline'
-              ? 'text-red-700'
-              : 'text-gray-700'
-          }`}>
-            {apiStatus === 'online' && 'Backend Online'}
-            {apiStatus === 'offline' && 'Backend Offline'}
-            {apiStatus === 'checking' && 'Verificando backend...'}
-          </span>
-        </div>
-      </div>
-
-      {/* Card de Download */}
+      {/* Input de URLs */}
       <div className="max-w-4xl mb-8">
         <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-xl font-semibold text-franca-blue mb-6 flex items-center">
-            <Download className="mr-2 text-franca-green" size={24} />
-            Adicionar Links para Download
+          <h2 className="text-xl font-semibold text-franca-blue mb-6">
+            Cole os links dos vídeos
           </h2>
 
-          <div className="space-y-4 mb-6">
+          <div className="space-y-4">
             {urls.map((url, index) => (
               <div key={index} className="flex gap-3">
                 <div className="flex-1 relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                    {getPlatformIcon(url)}
+                  </div>
                   <input
                     type="url"
                     value={url}
                     onChange={(e) => updateUrl(index, e.target.value)}
-                    placeholder="Cole o link do vídeo aqui (YouTube, TikTok, Instagram, etc)"
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-franca-green focus:border-transparent transition-all"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-franca-green focus:outline-none transition-all text-gray-700"
                     disabled={loading}
                   />
-                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                    {getPlatformIcon(url)}
-                  </div>
                 </div>
+                
                 {urls.length > 1 && (
                   <button
                     onClick={() => removeUrlField(index)}
-                    className="px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all disabled:opacity-50"
+                    className="px-4 py-4 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition-all"
                     disabled={loading}
                   >
                     <Trash2 size={20} />
@@ -289,270 +179,143 @@ export default function DownloaderPage() {
             ))}
           </div>
 
-          <div className="flex gap-3">
+          {/* Botões de ação */}
+          <div className="flex gap-4 mt-6">
             <button
               onClick={addUrlField}
+              className="flex items-center space-x-2 px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all"
               disabled={loading}
-              className="flex items-center px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-all disabled:opacity-50"
             >
-              <Plus size={20} className="mr-2" />
-              Adicionar Mais Links
+              <Plus size={20} />
+              <span>Adicionar Link</span>
             </button>
 
             <button
               onClick={handleDownload}
-              disabled={loading || apiStatus !== 'online'}
-              className="flex-1 flex items-center justify-center px-6 py-3 bg-gradient-to-r from-franca-green to-franca-green-hover text-franca-blue font-semibold rounded-lg hover:shadow-lg transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || urls.every(u => !u.trim())}
+              className="flex-1 flex items-center justify-center space-x-3 px-6 py-3 bg-franca-green text-franca-blue font-bold rounded-xl hover:bg-franca-green-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
-                  <Loader size={20} className="mr-2 animate-spin" />
-                  Baixando...
+                  <Loader className="animate-spin" size={20} />
+                  <span>Processando...</span>
                 </>
               ) : (
                 <>
-                  <Download size={20} className="mr-2" />
-                  Baixar Todos
+                  <Download size={20} />
+                  <span>Baixar Vídeos</span>
                 </>
               )}
             </button>
-          </div>
-
-          {/* Barra de Progresso */}
-          {loading && jobProgress && (
-            <div className="mt-6 space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">
-                    Progresso Geral: {jobProgress.completed}/{jobProgress.total} vídeos
-                  </span>
-                  <span className="text-sm font-bold text-franca-green">
-                    {Math.round((jobProgress.completed / jobProgress.total) * 100)}%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                  <div 
-                    className="bg-gradient-to-r from-franca-green to-franca-green-hover h-full rounded-full transition-all duration-300"
-                    style={{ width: `${(jobProgress.completed / jobProgress.total) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              {jobProgress.current && (
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <div className="flex items-start space-x-3 mb-3">
-                    <Loader className="text-blue-500 animate-spin flex-shrink-0 mt-1" size={20} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-blue-900 truncate">
-                        {jobProgress.current.title || jobProgress.current.url}
-                      </p>
-                      <p className="text-xs text-blue-600">
-                        Vídeo {jobProgress.current.index}/{jobProgress.current.total}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden">
-                    <div 
-                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-300"
-                      style={{ width: `${jobProgress.progress}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-blue-600 mt-2 text-right font-medium">
-                    {jobProgress.progress.toFixed(1)}%
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Dicas */}
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-700 font-medium mb-2">💡 Plataformas suportadas:</p>
-            <p className="text-sm text-blue-600">
-              YouTube, TikTok, Instagram, Facebook, Twitter, Vimeo, Dailymotion e mais de 1000 sites!
-            </p>
           </div>
         </div>
       </div>
 
       {/* Resultados */}
       {results.length > 0 && (
-        <div className="max-w-4xl mb-8">
+        <div className="max-w-4xl pb-10">
           <div className="bg-white rounded-2xl shadow-lg p-8">
             <h2 className="text-xl font-semibold text-franca-blue mb-6">
-              Resultados do Download
+              Resultados
             </h2>
 
             <div className="space-y-4">
-              {results.map((result, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center justify-between p-4 rounded-lg border-2 ${
-                    result.status === 'success'
-                      ? 'bg-green-50 border-green-200'
-                      : 'bg-red-50 border-red-200'
-                  }`}
-                >
-                  <div className="flex items-center space-x-4 flex-1">
-                    {result.status === 'success' ? (
-                      <CheckCircle className="text-green-500 flex-shrink-0" size={24} />
-                    ) : (
-                      <XCircle className="text-red-500 flex-shrink-0" size={24} />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">
-                        {result.title}
-                      </p>
-                      {result.status === 'success' ? (
-                        <p className="text-sm text-gray-600">
-                          {result.platform} • {result.filename}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-red-600">
-                          Erro: {result.error}
-                        </p>
+              {results.map((result, index) => {
+                const isSuccess = result.status === 'success' || result.status === 'redirect'
+                const isRedirect = result.status === 'redirect'
+
+                return (
+                  <div
+                    key={index}
+                    className={`p-5 rounded-xl border-2 ${
+                      isSuccess
+                        ? 'bg-green-50 border-green-200'
+                        : 'bg-red-50 border-red-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center space-x-4 flex-1 min-w-0">
+                        {isSuccess ? (
+                          <CheckCircle className="text-green-500 flex-shrink-0" size={24} />
+                        ) : (
+                          <XCircle className="text-red-500 flex-shrink-0" size={24} />
+                        )}
+                        
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate mb-1">
+                            {result.title || result.url}
+                          </p>
+                          
+                          {isSuccess ? (
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs px-2 py-1 rounded-full ${getPlatformColor(result.platform)}`}>
+                                {result.platform}
+                              </span>
+                              {isRedirect && (
+                                <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+                                  Externo
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-red-600">
+                              {result.error}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {isSuccess && (
+                        <div className="flex gap-2 flex-shrink-0">
+                          {/* Botão Copiar Link (só mostra se for Local e tiver link) */}
+                          {!isRedirect && result.downloadUrl && (
+                            <button
+                              onClick={() => handleCopyLink(window.location.origin + result.downloadUrl, index)}
+                              className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all"
+                              title="Copiar link do arquivo"
+                            >
+                              {copiedIndex === index ? (
+                                <Check size={20} className="text-green-500" />
+                              ) : (
+                                <Copy size={20} />
+                              )}
+                            </button>
+                          )}
+
+                          {/* Botão Principal de Ação */}
+                          <button
+                            onClick={() => handleAction(result)}
+                            className="flex items-center gap-2 px-4 py-2 bg-franca-green text-franca-blue font-semibold rounded-lg hover:bg-franca-green-hover transition-all"
+                          >
+                            {isRedirect ? (
+                              <>
+                                <ExternalLink size={18} />
+                                <span>Abrir no Cobalt</span>
+                              </>
+                            ) : (
+                              <>
+                                <Download size={18} />
+                                <span>Salvar Arquivo</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
+                )
+              })}
+            </div>
 
-                  {result.status === 'success' && (
-                    <button
-                      onClick={() => handleDownloadFile(result.downloadUrl)}
-                      className="px-4 py-2 bg-franca-green text-franca-blue font-semibold rounded-lg hover:bg-franca-green-hover transition-all ml-4"
-                    >
-                      Baixar
-                    </button>
-                  )}
-                </div>
-              ))}
+            {/* Rodapé informativo */}
+            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+              <p>
+                <strong>ℹ️ Nota:</strong> Arquivos baixados localmente ficam salvos na pasta <code>public/downloads</code> do projeto.
+                Links externos abrem o Cobalt Tools para processamento.
+              </p>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Histórico */}
-      {history.length > 0 && (
-        <div className="max-w-4xl">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-franca-blue">
-                Histórico de Downloads
-              </h2>
-              <button
-                onClick={() => openDeleteModal('all')}
-                className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all"
-              >
-                <Trash2 size={16} />
-                <span>Limpar Tudo</span>
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {history.map((file, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all"
-                >
-                  <div className="flex items-center space-x-4 flex-1 min-w-0">
-                    <Film className="text-franca-green flex-shrink-0" size={24} />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">
-                        {file.filename}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {formatFileSize(file.size)} • {new Date(file.created).toLocaleString('pt-BR')}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleDownloadFile(file.downloadUrl)}
-                      className="px-4 py-2 bg-franca-green text-franca-blue font-semibold rounded-lg hover:bg-franca-green-hover transition-all"
-                    >
-                      Baixar
-                    </button>
-                    <button
-                      onClick={() => openDeleteModal('single', file.filename)}
-                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Confirmação de Exclusão */}
-      {showDeleteModal && (
-        <>
-          <div 
-            className="fixed inset-0 bg-black/50 z-[9998]"
-            onClick={closeDeleteModal}
-          />
-
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                      <AlertTriangle className="text-red-600" size={24} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">Confirmar Exclusão</h3>
-                      <p className="text-sm text-gray-500">Esta ação não pode ser desfeita</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={closeDeleteModal}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-all"
-                  >
-                    <X size={20} className="text-gray-500" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6">
-                {deleteTarget?.type === 'single' ? (
-                  <p className="text-gray-700">
-                    Tem certeza que deseja excluir o arquivo{' '}
-                    <span className="font-semibold text-franca-blue">
-                      {deleteTarget.filename}
-                    </span>
-                    ?
-                  </p>
-                ) : (
-                  <p className="text-gray-700">
-                    Tem certeza que deseja excluir{' '}
-                    <span className="font-semibold text-red-600">
-                      todos os {history.length} arquivos
-                    </span>{' '}
-                    do histórico?
-                  </p>
-                )}
-              </div>
-
-              <div className="p-6 bg-gray-50 border-t border-gray-200 flex gap-3">
-                <button
-                  onClick={closeDeleteModal}
-                  className="flex-1 px-4 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="flex-1 px-4 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all"
-                >
-                  {deleteTarget?.type === 'single' ? 'Excluir' : 'Excluir Tudo'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
       )}
     </main>
   )

@@ -4,7 +4,6 @@ import { Home, Layers, HelpCircle, LogOut, User, Settings, Users, GraduationCap 
 import { useRouter, usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import NotificationBell from '@/components/NotificationBell'
 
 export default function Sidebar() {
   const router = useRouter()
@@ -86,29 +85,26 @@ export default function Sidebar() {
         <div className="h-1 w-12 bg-franca-green rounded-full"></div>
       </div>
 
-      {/* User Info + Notificações */}
+      {/* User Info */}
       {user && (
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-franca-green rounded-full flex items-center justify-center overflow-hidden">
-                {user.profile_photo_url ? (
-                  <img 
-                    key={user.profile_photo_url} // Force re-render quando URL muda
-                    src={user.profile_photo_url} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User size={20} className="text-franca-blue" />
-                )}
-              </div>
-              <div>
-                <p className="text-white font-semibold text-sm">{user.name}</p>
-                <p className="text-franca-green-light text-xs">{user.role}</p>
-              </div>
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-franca-green rounded-full flex items-center justify-center overflow-hidden">
+              {user.profile_photo_url ? (
+                <img 
+                  key={user.profile_photo_url} // Force re-render quando URL muda
+                  src={user.profile_photo_url} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User size={20} className="text-franca-blue" />
+              )}
             </div>
-            <NotificationBell />
+            <div>
+              <p className="text-white font-semibold text-sm">{user.name}</p>
+              <p className="text-franca-green-light text-xs">{user.role}</p>
+            </div>
           </div>
         </div>
       )}
