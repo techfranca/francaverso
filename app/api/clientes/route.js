@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -105,6 +107,44 @@ export async function PUT(request) {
 
   } catch (error) {
     console.error('Update client error:', error)
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'ID do cliente não fornecido' },
+        { status: 400 }
+      )
+    }
+
+    const supabase = createServerClient()
+
+    const { error } = await supabase
+      .from('clients')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error deleting client:', error)
+      return NextResponse.json(
+        { error: 'Erro ao excluir cliente' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true })
+
+  } catch (error) {
+    console.error('Delete client error:', error)
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
