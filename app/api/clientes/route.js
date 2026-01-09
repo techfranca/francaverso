@@ -4,6 +4,39 @@ import { createClientFolderStructure } from '@/lib/google-drive'
 
 export const dynamic = 'force-dynamic'
 
+// Função para limpar dados antes de enviar ao Supabase
+function sanitizeClientData(data) {
+  const sanitized = {}
+  
+  // Campos que devem ser convertidos para null se vazios (numéricos)
+  const numericFields = ['valor_servico', 'dia_pagamento', 'faturamento_medio']
+  
+  // Campos que devem ser convertidos para null se vazios (datas)
+  const dateFields = ['data_inicio', 'data_encerramento', 'aniversario']
+  
+  for (const [key, value] of Object.entries(data)) {
+    // Ignorar campos undefined
+    if (value === undefined) continue
+    
+    // Converter strings vazias para null em campos numéricos
+    if (numericFields.includes(key)) {
+      sanitized[key] = value === '' || value === null ? null : Number(value)
+      continue
+    }
+    
+    // Converter strings vazias para null em campos de data
+    if (dateFields.includes(key)) {
+      sanitized[key] = value === '' || value === null ? null : value
+      continue
+    }
+    
+    // Para outros campos, manter string vazia ou o valor
+    sanitized[key] = value
+  }
+  
+  return sanitized
+}
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -56,7 +89,8 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const clientData = await request.json()
+    const rawData = await request.json()
+    const clientData = sanitizeClientData(rawData)
     const supabase = createServerClient()
 
     const { data: client, error } = await supabase
@@ -68,8 +102,8 @@ export async function POST(request) {
     if (error) {
       console.error('Error creating client:', error)
       return NextResponse.json(
-        { error: 'Erro ao criar cliente' },
-        { status: 500 }
+        { error: error.message || 'Erro ao criar cliente' },
+        { status: 400 }
       )
     }
 
@@ -117,7 +151,8 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    const { id, ...clientData } = await request.json()
+    const { id, ...rawData } = await request.json()
+    const clientData = sanitizeClientData(rawData)
     const supabase = createServerClient()
 
     const { data: client, error } = await supabase
@@ -130,8 +165,8 @@ export async function PUT(request) {
     if (error) {
       console.error('Error updating client:', error)
       return NextResponse.json(
-        { error: 'Erro ao atualizar cliente' },
-        { status: 500 }
+        { error: error.message || 'Erro ao atualizar cliente' },
+        { status: 400 }
       )
     }
 
