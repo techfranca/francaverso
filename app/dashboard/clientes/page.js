@@ -731,7 +731,46 @@ function ClientFormModal({ title, client, onClose, onSave, saving }) {
               </div>
               <div><label className={labelClass}>Nicho</label><input type="text" name="nicho" value={formData.nicho || ''} onChange={handleChange} className={inputClass} placeholder="Ex: Moda Praia" /></div>
               <div><label className={labelClass}>Fat. Médio</label><input type="number" name="faturamento_medio" value={formData.faturamento_medio || ''} onChange={handleChange} className={inputClass} /></div>
-              <div className="md:col-span-3"><label className={labelClass}>Serviços Contratados</label><input type="text" name="servicos_contratados" value={formData.servicos_contratados || ''} onChange={handleChange} className={inputClass} placeholder="Ex: Tráfego Pago e Produção de Conteúdo" /></div>
+              <div className="md:col-span-3">
+                <label className={labelClass}>Serviços Contratados</label>
+                <div className="flex flex-wrap gap-3 mt-2">
+                  {['Tráfego Pago', 'Produção de Conteúdo', 'IA'].map((servico) => {
+                    const isSelected = (formData.servicos_contratados || '').includes(servico)
+                    return (
+                      <label
+                        key={servico}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 cursor-pointer transition-all ${
+                          isSelected 
+                            ? 'border-franca-green bg-franca-green/10 text-franca-blue' 
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const current = formData.servicos_contratados ? formData.servicos_contratados.split(', ').filter(Boolean) : []
+                            let updated
+                            if (e.target.checked) {
+                              updated = [...current, servico]
+                            } else {
+                              updated = current.filter(s => s !== servico)
+                            }
+                            handleChange({ target: { name: 'servicos_contratados', value: updated.join(', ') } })
+                          }}
+                          className="sr-only"
+                        />
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                          isSelected ? 'border-franca-green bg-franca-green' : 'border-slate-300'
+                        }`}>
+                          {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                        <span className="font-medium text-sm">{servico}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -742,7 +781,19 @@ function ClientFormModal({ title, client, onClose, onSave, saving }) {
               <div><label className={labelClass}>Modelo</label><select name="modelo_pagamento" value={formData.modelo_pagamento || ''} onChange={handleChange} className={inputClass}><option value="">Selecione...</option><option value="Fixo">Fixo</option><option value="Variável">Variável</option><option value="Outro">Outro</option></select></div>
               <div><label className={labelClass}>Valor (R$)</label><input type="number" name="valor_servico" value={formData.valor_servico || ''} onChange={handleChange} className={inputClass} step="0.01" /></div>
               <div><label className={labelClass}>Dia Pgto</label><input type="number" name="dia_pagamento" value={formData.dia_pagamento || ''} onChange={handleChange} className={inputClass} min="1" max="31" /></div>
-              <div><label className={labelClass}>Canal Venda</label><input type="text" name="canal_venda" value={formData.canal_venda || ''} onChange={handleChange} className={inputClass} placeholder="Ex: Indicação" /></div>
+              <div>
+                <label className={labelClass}>Canal Venda</label>
+                <select name="canal_venda" value={formData.canal_venda || ''} onChange={handleChange} className={inputClass}>
+                  <option value="">Selecione...</option>
+                  <option value="Indicação">Indicação</option>
+                  <option value="Prospecção Ativa">Prospecção Ativa</option>
+                  <option value="Pesca em Balde">Pesca em Balde</option>
+                  <option value="Marketplace">Marketplace</option>
+                  <option value="Eventos presenciais">Eventos presenciais</option>
+                  <option value="Tráfego Pago">Tráfego Pago</option>
+                  <option value="Produção de conteúdo">Produção de conteúdo</option>
+                </select>
+              </div>
             </div>
           </div>
 
