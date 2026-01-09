@@ -695,17 +695,6 @@ function ClientFormModal({ title, client, onClose, onSave, saving }) {
               </div>
               <div><label className={labelClass}>Nicho</label><input type="text" name="nicho" value={formData.nicho || ''} onChange={handleChange} className={inputClass} placeholder="Ex: Moda Praia" /></div>
               <div><label className={labelClass}>Fat. Médio</label><input type="number" name="faturamento_medio" value={formData.faturamento_medio || ''} onChange={handleChange} className={inputClass} /></div>
-              <div className="md:col-span-3"><label className={labelClass}>Serviços Contratados</label><input type="text" name="servicos_contratados" value={formData.servicos_contratados || ''} onChange={handleChange} className={inputClass} placeholder="Ex: Tráfego Pago e Produção de Conteúdo" /></div>
-            </div>
-          </div>
-
-          {/* Pagamento */}
-          <div className="mb-8">
-            <h3 className="font-semibold text-slate-800 mb-5 flex items-center gap-2"><DollarSign size={18} className="text-franca-green" />Pagamento</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-              <div><label className={labelClass}>Modelo</label><select name="modelo_pagamento" value={formData.modelo_pagamento || ''} onChange={handleChange} className={inputClass}><option value="">Selecione...</option><option value="Fixo">Fixo</option><option value="Variável">Variável</option><option value="Outro">Outro</option></select></div>
-              <div><label className={labelClass}>Valor (R$)</label><input type="number" name="valor_servico" value={formData.valor_servico || ''} onChange={handleChange} className={inputClass} step="0.01" /></div>
-              <div><label className={labelClass}>Dia Pgto</label><input type="number" name="dia_pagamento" value={formData.dia_pagamento || ''} onChange={handleChange} className={inputClass} min="1" max="31" /></div>
               <div className="md:col-span-3">
   <label className={labelClass}>Serviços Contratados</label>
   <div className="flex flex-wrap gap-3 mt-2">
@@ -746,6 +735,17 @@ function ClientFormModal({ title, client, onClose, onSave, saving }) {
     })}
   </div>
 </div>
+            </div>
+          </div>
+
+          {/* Pagamento */}
+          <div className="mb-8">
+            <h3 className="font-semibold text-slate-800 mb-5 flex items-center gap-2"><DollarSign size={18} className="text-franca-green" />Pagamento</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+              <div><label className={labelClass}>Modelo</label><select name="modelo_pagamento" value={formData.modelo_pagamento || ''} onChange={handleChange} className={inputClass}><option value="">Selecione...</option><option value="Fixo">Fixo</option><option value="Variável">Variável</option><option value="Outro">Outro</option></select></div>
+              <div><label className={labelClass}>Valor (R$)</label><input type="number" name="valor_servico" value={formData.valor_servico || ''} onChange={handleChange} className={inputClass} step="0.01" /></div>
+              <div><label className={labelClass}>Dia Pgto</label><input type="number" name="dia_pagamento" value={formData.dia_pagamento || ''} onChange={handleChange} className={inputClass} min="1" max="31" /></div>
+              <div><label className={labelClass}>Canal Venda</label><input type="text" name="canal_venda" value={formData.canal_venda || ''} onChange={handleChange} className={inputClass} placeholder="Ex: Indicação" /></div>
             </div>
           </div>
 
