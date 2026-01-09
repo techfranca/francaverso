@@ -6,7 +6,7 @@ import {
   Tag, Briefcase, FileText, CreditCard, TrendingUp, Clock, Users, Loader,
   ChevronDown, Cake, Hash, Plus, Edit3, Trash2, Save, AlertTriangle,
   CheckCircle, XCircle, Sparkles, ArrowUpRight, Filter, MoreVertical,
-  Globe, Target, Zap, Award, PieChart, BarChart3
+  Globe, Target, Zap, Award, PieChart, BarChart3, FolderOpen, ExternalLink
 } from 'lucide-react'
 
 // Cores por segmento
@@ -74,8 +74,23 @@ export default function ClientesPage() {
     setSaving(true)
     try {
       const response = await fetch('/api/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(clientData) })
-      if (response.ok) { showNotification('Cliente adicionado com sucesso!'); setShowAddModal(false); fetchClients() }
-      else showNotification('Erro ao adicionar cliente', 'error')
+      const data = await response.json()
+      
+      if (response.ok) { 
+        // Verificar se as pastas foram criadas
+        if (data.drive?.success) {
+          if (data.drive.alreadyExisted) {
+            showNotification('Cliente adicionado! Pasta já existia no Drive.')
+          } else {
+            showNotification('Cliente adicionado e pastas criadas no Drive!')
+          }
+        } else {
+          showNotification('Cliente adicionado! (Erro ao criar pastas no Drive)')
+        }
+        setShowAddModal(false)
+        fetchClients() 
+      }
+      else showNotification(data.error || 'Erro ao adicionar cliente', 'error')
     } catch { showNotification('Erro ao adicionar cliente', 'error') }
     finally { setSaving(false) }
   }
@@ -398,6 +413,18 @@ function ClientCard({ client, onClick, formatCurrency }) {
         }`}>
           {isActive ? <Zap size={12} /> : <Clock size={12} />} {client.status}
         </span>
+        {client.pasta_drive && (
+          <a
+            href={client.pasta_drive}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-200 transition-colors"
+            title="Abrir pasta no Drive"
+          >
+            <FolderOpen size={12} /> Drive
+          </a>
+        )}
       </div>
 
       {/* Value */}
@@ -454,6 +481,16 @@ function ClientDetailModal({ client, onClose, onEdit, onDelete, onToggleStatus, 
 
         {/* Actions */}
         <div className="px-8 py-4 bg-slate-50 border-b border-slate-100 flex gap-3 flex-wrap">
+          {client.pasta_drive && (
+            <a 
+              href={client.pasta_drive} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 text-white rounded-xl hover:bg-amber-600 hover:shadow-lg transition-all font-medium"
+            >
+              <FolderOpen size={16} /> Abrir Drive
+            </a>
+          )}
           <button onClick={onEdit} className="flex items-center gap-2 px-5 py-2.5 bg-franca-blue text-white rounded-xl hover:shadow-lg transition-all font-medium">
             <Edit3 size={16} /> Editar
           </button>

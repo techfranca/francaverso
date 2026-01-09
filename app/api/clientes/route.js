@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { createClientFolderStructure } from '@/lib/google-drive'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,7 +73,38 @@ export async function POST(request) {
       )
     }
 
-    return NextResponse.json({ client })
+    // Criar estrutura de pastas no Google Drive
+    let driveResult = null
+    if (client.nome_empresa && client.segmento) {
+      try {
+        console.log('📁 Criando pastas no Drive para:', client.nome_empresa)
+        driveResult = await createClientFolderStructure({
+          nomeCliente: client.nome_empresa,
+          segmento: client.segmento,
+          servicosContratados: client.servicos_contratados || '',
+        })
+        console.log('📁 Resultado:', driveResult)
+
+        // Se a criação foi bem sucedida, salvar o link da pasta no cliente
+        if (driveResult.success && driveResult.folderLink) {
+          await supabase
+            .from('clients')
+            .update({ pasta_drive: driveResult.folderLink })
+            .eq('id', client.id)
+          
+          client.pasta_drive = driveResult.folderLink
+        }
+      } catch (driveError) {
+        console.error('Erro ao criar pastas no Drive:', driveError)
+        // Não falhar a criação do cliente por causa do Drive
+        driveResult = { success: false, message: driveError.message }
+      }
+    }
+
+    return NextResponse.json({ 
+      client,
+      drive: driveResult 
+    })
 
   } catch (error) {
     console.error('Create client error:', error)
