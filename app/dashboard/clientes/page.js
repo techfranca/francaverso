@@ -6,7 +6,7 @@ import {
   Tag, Briefcase, FileText, CreditCard, TrendingUp, Clock, Users, Loader,
   ChevronDown, Cake, Hash, Plus, Edit3, Trash2, Save, AlertTriangle,
   CheckCircle, XCircle, Sparkles, ArrowUpRight, Filter, MoreVertical,
-  Globe, Target, Zap, Award, PieChart, BarChart3, FolderOpen, ExternalLink
+  Globe, Target, Zap, Award, PieChart, BarChart3, FolderOpen, ExternalLink, Archive
 } from 'lucide-react'
 
 // Cores por segmento
@@ -28,8 +28,8 @@ export default function ClientesPage() {
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('todos')
   const [segmentoFilter, setSegmentoFilter] = useState('todos')
+  const [activeTab, setActiveTab] = useState('ativos') // 'ativos' ou 'arquivados'
   const [selectedClient, setSelectedClient] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -48,14 +48,13 @@ export default function ClientesPage() {
     dia_pagamento: '', canal_venda: '', data_inicio: '', data_encerramento: ''
   }
 
-  useEffect(() => { fetchClients() }, [statusFilter, segmentoFilter])
+  useEffect(() => { fetchClients() }, [segmentoFilter])
   useEffect(() => { if (notification) { const t = setTimeout(() => setNotification(null), 3000); return () => clearTimeout(t) } }, [notification])
 
   const fetchClients = async () => {
     try {
       setLoading(true)
       const params = new URLSearchParams()
-      if (statusFilter !== 'todos') params.append('status', statusFilter)
       if (segmentoFilter !== 'todos') params.append('segmento', segmentoFilter)
       const response = await fetch(`/api/clientes?${params.toString()}`)
       const data = await response.json()
@@ -118,17 +117,30 @@ export default function ClientesPage() {
 
   const handleToggleStatus = async (client) => {
     const newStatus = client.status === 'Ativo' ? 'Inativo' : 'Ativo'
-    await handleUpdateClient({ ...client, status: newStatus, data_encerramento: newStatus === 'Inativo' ? new Date().toISOString().split('T')[0] : client.data_encerramento })
+    await handleUpdateClient({ 
+      ...client, 
+      status: newStatus, 
+      data_encerramento: newStatus === 'Inativo' ? new Date().toISOString().split('T')[0] : client.data_encerramento 
+    })
   }
 
   const openEditModal = (client) => { setEditingClient({ ...client }); setShowEditModal(true); setSelectedClient(null) }
   const openDeleteModal = (client) => { setClientToDelete(client); setShowDeleteModal(true); setSelectedClient(null) }
 
-  const filteredClients = clients.filter(client => {
-    if (!searchTerm) return true
-    const search = searchTerm.toLowerCase()
-    return client.nome_empresa?.toLowerCase().includes(search) || client.nome_cliente?.toLowerCase().includes(search) || client.tag?.toLowerCase().includes(search)
-  })
+  // Filtrar por aba (ativos/arquivados) e depois por busca
+  const filteredClients = clients
+    .filter(client => {
+      // Filtro por aba
+      if (activeTab === 'ativos') return client.status === 'Ativo'
+      if (activeTab === 'arquivados') return client.status === 'Inativo'
+      return true
+    })
+    .filter(client => {
+      // Filtro por busca
+      if (!searchTerm) return true
+      const search = searchTerm.toLowerCase()
+      return client.nome_empresa?.toLowerCase().includes(search) || client.nome_cliente?.toLowerCase().includes(search) || client.tag?.toLowerCase().includes(search)
+    })
 
   const stats = {
     total: clients.length,
@@ -194,7 +206,7 @@ export default function ClientesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           <StatCard icon={Users} label="Total de Clientes" value={stats.total} color="blue" />
           <StatCard icon={Zap} label="Clientes Ativos" value={stats.ativos} color="green" />
-          <StatCard icon={Clock} label="Clientes Inativos" value={stats.inativos} color="gray" />
+          <StatCard icon={Clock} label="Clientes Inativos" value={stats.inativos} color="red" />
           <StatCard icon={TrendingUp} label="MRR Atual" value={formatCurrency(stats.mrr)} color="emerald" isCurrency />
         </div>
 
@@ -215,19 +227,6 @@ export default function ClientesPage() {
             <div className="flex gap-3">
               <div className="relative">
                 <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="appearance-none pl-4 pr-10 py-4 bg-slate-50 border-0 rounded-xl focus:ring-2 focus:ring-franca-green cursor-pointer font-medium text-slate-700 min-w-[160px]"
-                >
-                  <option value="todos">Todos Status</option>
-                  <option value="Ativo">✓ Ativos</option>
-                  <option value="Inativo">○ Inativos</option>
-                </select>
-                <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
-              
-              <div className="relative">
-                <select
                   value={segmentoFilter}
                   onChange={(e) => setSegmentoFilter(e.target.value)}
                   className="appearance-none pl-4 pr-10 py-4 bg-slate-50 border-0 rounded-xl focus:ring-2 focus:ring-franca-green cursor-pointer font-medium text-slate-700 min-w-[180px]"
@@ -242,7 +241,7 @@ export default function ClientesPage() {
         </div>
 
         {/* Legenda de Segmentos */}
-        <div className="bg-white rounded-2xl px-5 py-3 shadow-sm border border-slate-100 mb-8">
+        <div className="bg-white rounded-2xl px-5 py-3 shadow-sm border border-slate-100 mb-4">
           <div className="flex items-center gap-6 flex-wrap">
             <span className="text-sm text-slate-500 font-medium">Segmentos:</span>
             {activeSegments.map(seg => {
@@ -255,6 +254,42 @@ export default function ClientesPage() {
               )
             })}
           </div>
+        </div>
+
+        {/* Abas Ativos / Arquivados */}
+        <div className="flex gap-2 mb-8">
+          <button
+            onClick={() => setActiveTab('ativos')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+              activeTab === 'ativos'
+                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                : 'bg-white text-slate-600 border border-slate-200 hover:border-emerald-300 hover:text-emerald-600'
+            }`}
+          >
+            <Zap size={18} />
+            Ativos
+            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
+              activeTab === 'ativos' ? 'bg-white/20' : 'bg-emerald-100 text-emerald-700'
+            }`}>
+              {stats.ativos}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('arquivados')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+              activeTab === 'arquivados'
+                ? 'bg-red-500 text-white shadow-lg shadow-red-500/25'
+                : 'bg-white text-slate-600 border border-slate-200 hover:border-red-300 hover:text-red-600'
+            }`}
+          >
+            <Archive size={18} />
+            Arquivados
+            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
+              activeTab === 'arquivados' ? 'bg-white/20' : 'bg-red-100 text-red-700'
+            }`}>
+              {stats.inativos}
+            </span>
+          </button>
         </div>
 
         {/* Clients Grid Premium */}
@@ -352,6 +387,7 @@ function StatCard({ icon: Icon, label, value, color, isCurrency }) {
   const colorClasses = {
     blue: 'from-blue-500 to-blue-600 shadow-blue-500/25',
     green: 'from-emerald-500 to-emerald-600 shadow-emerald-500/25',
+    red: 'from-red-500 to-red-600 shadow-red-500/25',
     gray: 'from-slate-400 to-slate-500 shadow-slate-400/25',
     emerald: 'from-teal-500 to-emerald-500 shadow-teal-500/25'
   }
@@ -392,7 +428,7 @@ function ClientCard({ client, onClick, formatCurrency }) {
           <div className="w-14 h-14 bg-gradient-to-br from-franca-blue to-franca-blue/80 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
             <span className="text-white font-bold text-xl">{initial}</span>
           </div>
-          <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white ${isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+          <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white ${isActive ? 'bg-emerald-500' : 'bg-red-500'}`} />
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-slate-800 text-lg truncate group-hover:text-franca-blue transition-colors">
@@ -409,7 +445,7 @@ function ClientCard({ client, onClick, formatCurrency }) {
           {client.segmento || 'N/A'}
         </span>
         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${
-          isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+          isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
         }`}>
           {isActive ? <Zap size={12} /> : <Clock size={12} />} {client.status}
         </span>
@@ -468,7 +504,7 @@ function ClientDetailModal({ client, onClose, onEdit, onDelete, onToggleStatus, 
               <h2 className="text-2xl font-bold text-white mb-2">{client.nome_empresa}</h2>
               <div className="flex items-center gap-3">
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  isActive ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30' : 'bg-white/10 text-white/70 border border-white/20'
+                  isActive ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30' : 'bg-red-500/20 text-red-200 border border-red-400/30'
                 }`}>
                   {isActive ? '● Ativo' : '○ Inativo'}
                 </span>
@@ -695,46 +731,7 @@ function ClientFormModal({ title, client, onClose, onSave, saving }) {
               </div>
               <div><label className={labelClass}>Nicho</label><input type="text" name="nicho" value={formData.nicho || ''} onChange={handleChange} className={inputClass} placeholder="Ex: Moda Praia" /></div>
               <div><label className={labelClass}>Fat. Médio</label><input type="number" name="faturamento_medio" value={formData.faturamento_medio || ''} onChange={handleChange} className={inputClass} /></div>
-              <div className="md:col-span-3">
-  <label className={labelClass}>Serviços Contratados</label>
-  <div className="flex flex-wrap gap-3 mt-2">
-    {['Tráfego Pago', 'Produção de Conteúdo', 'IA'].map((servico) => {
-      const isSelected = (formData.servicos_contratados || '').includes(servico)
-      return (
-        <label
-          key={servico}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 cursor-pointer transition-all ${
-            isSelected 
-              ? 'border-franca-green bg-franca-green/10 text-franca-blue' 
-              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-          }`}
-        >
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={(e) => {
-              const current = formData.servicos_contratados ? formData.servicos_contratados.split(', ').filter(Boolean) : []
-              let updated
-              if (e.target.checked) {
-                updated = [...current, servico]
-              } else {
-                updated = current.filter(s => s !== servico)
-              }
-              handleChange({ target: { name: 'servicos_contratados', value: updated.join(', ') } })
-            }}
-            className="sr-only"
-          />
-          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
-            isSelected ? 'border-franca-green bg-franca-green' : 'border-slate-300'
-          }`}>
-            {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-          </div>
-          <span className="font-medium text-sm">{servico}</span>
-        </label>
-      )
-    })}
-  </div>
-</div>
+              <div className="md:col-span-3"><label className={labelClass}>Serviços Contratados</label><input type="text" name="servicos_contratados" value={formData.servicos_contratados || ''} onChange={handleChange} className={inputClass} placeholder="Ex: Tráfego Pago e Produção de Conteúdo" /></div>
             </div>
           </div>
 
