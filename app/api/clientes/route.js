@@ -90,7 +90,8 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const rawData = await request.json()
-    const clientData = sanitizeClientData(rawData)
+    const { credentials, ...clientRawData } = rawData
+    const clientData = sanitizeClientData(clientRawData)
     const supabase = createServerClient()
 
     const { data: client, error } = await supabase
@@ -105,6 +106,40 @@ export async function POST(request) {
         { error: error.message || 'Erro ao criar cliente' },
         { status: 400 }
       )
+    }
+
+    // Salvar credenciais se fornecidas
+    let credentialsResult = null
+    if (credentials && credentials.length > 0) {
+      try {
+        const validCredentials = credentials
+          .filter(cred => cred.platform_name && (cred.login || cred.password))
+          .map(cred => ({
+            client_id: client.id,
+            credential_type: cred.credential_type || 'custom',
+            platform_name: cred.platform_name,
+            login: cred.login || null,
+            password: cred.password || null,
+            notes: cred.notes || null
+          }))
+
+        if (validCredentials.length > 0) {
+          const { data: savedCreds, error: credError } = await supabase
+            .from('client_credentials')
+            .insert(validCredentials)
+            .select()
+
+          if (credError) {
+            console.error('Error saving credentials:', credError)
+            credentialsResult = { success: false, error: credError.message }
+          } else {
+            credentialsResult = { success: true, count: savedCreds.length }
+          }
+        }
+      } catch (credError) {
+        console.error('Error processing credentials:', credError)
+        credentialsResult = { success: false, error: credError.message }
+      }
     }
 
     // Criar estrutura de pastas no Google Drive
@@ -137,7 +172,8 @@ export async function POST(request) {
 
     return NextResponse.json({ 
       client,
-      drive: driveResult 
+      drive: driveResult,
+      credentials: credentialsResult
     })
 
   } catch (error) {
@@ -151,7 +187,7 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    const { id, ...rawData } = await request.json()
+    const { id, credentials, ...rawData } = await request.json()
     const clientData = sanitizeClientData(rawData)
     const supabase = createServerClient()
 
@@ -170,7 +206,57 @@ export async function PUT(request) {
       )
     }
 
-    return NextResponse.json({ client })
+    // Atualizar credenciais se fornecidas
+    let credentialsResult = null
+    if (credentials !== undefined) {
+      try {
+        // Deletar credenciais existentes
+        await supabase
+          .from('client_credentials')
+          .delete()
+          .eq('client_id', id)
+
+        // Inserir novas credenciais
+        if (credentials && credentials.length > 0) {
+          const validCredentials = credentials
+            .filter(cred => cred.platform_name && (cred.login || cred.password))
+            .map(cred => ({
+              client_id: id,
+              credential_type: cred.credential_type || 'custom',
+              platform_name: cred.platform_name,
+              login: cred.login || null,
+              password: cred.password || null,
+              notes: cred.notes || null
+            }))
+
+          if (validCredentials.length > 0) {
+            const { data: savedCreds, error: credError } = await supabase
+              .from('client_credentials')
+              .insert(validCredentials)
+              .select()
+
+            if (credError) {
+              console.error('Error saving credentials:', credError)
+              credentialsResult = { success: false, error: credError.message }
+            } else {
+              credentialsResult = { success: true, count: savedCreds.length }
+            }
+          } else {
+            credentialsResult = { success: true, count: 0 }
+          }
+        } else {
+          credentialsResult = { success: true, count: 0 }
+        }
+      } catch (credError) {
+        console.error('Error processing credentials:', credError)
+        credentialsResult = { success: false, error: credError.message }
+      }
+    }
+
+    return NextResponse.json({ 
+      client,
+      credentials: credentialsResult
+    })
 
   } catch (error) {
     console.error('Update client error:', error)
