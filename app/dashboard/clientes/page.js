@@ -1,1082 +1,1443 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { 
-  FiPlus, FiSearch, FiEdit2, FiTrash2, FiX, FiExternalLink, 
-  FiFilter, FiPhone, FiMail, FiCalendar, FiDollarSign, FiFolder,
-  FiEye, FiEyeOff, FiCopy, FiCheck, FiKey, FiLock, FiShield,
-  FiInstagram, FiFacebook
-} from 'react-icons/fi'
+  Building2, Search, X, User, Mail, Phone, MapPin, Calendar, DollarSign,
+  Tag, Briefcase, FileText, CreditCard, TrendingUp, Clock, Users, Loader,
+  ChevronDown, Cake, Hash, Plus, Edit3, Trash2, Save, AlertTriangle,
+  CheckCircle, XCircle, Sparkles, ArrowUpRight, Filter, MoreVertical,
+  Globe, Target, Zap, Award, PieChart, BarChart3, FolderOpen, ExternalLink, Archive,
+  Key, Eye, EyeOff, Copy, Shield, Instagram, Facebook
+} from 'lucide-react'
 
-// Segmentos disponíveis
-const SEGMENTOS = [
-  { value: 'ecommerce', label: 'E-commerce', color: 'from-blue-500 to-cyan-500' },
-  { value: 'infoproduto', label: 'Infoproduto', color: 'from-purple-500 to-pink-500' },
-  { value: 'negocio_local', label: 'Negócio Local', color: 'from-orange-500 to-amber-500' },
-  { value: 'inside_sales', label: 'Inside Sales', color: 'from-green-500 to-emerald-500' },
-  { value: 'lancamento', label: 'Lançamento', color: 'from-red-500 to-rose-500' },
-  { value: 'food_service', label: 'Food Service', color: 'from-yellow-500 to-orange-500' },
-  { value: 'servicos_online', label: 'Serviços Online', color: 'from-indigo-500 to-violet-500' },
-]
+// Função para obter ícone e cor da plataforma
+const getPlatformStyle = (platformName) => {
+  const name = platformName?.toLowerCase() || ''
+  
+  if (name.includes('instagram')) {
+    return { 
+      icon: Instagram, 
+      gradient: 'from-pink-500 via-purple-500 to-orange-400',
+      bgColor: 'bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400'
+    }
+  }
+  if (name.includes('facebook') || name.includes('meta')) {
+    return { 
+      icon: Facebook, 
+      gradient: 'from-blue-600 to-blue-700',
+      bgColor: 'bg-gradient-to-br from-blue-600 to-blue-700'
+    }
+  }
+  if (name.includes('email') || name.includes('e-mail') || name.includes('gmail') || name.includes('outlook') || name.includes('hotmail')) {
+    return { 
+      icon: Mail, 
+      gradient: 'from-red-500 to-red-600',
+      bgColor: 'bg-gradient-to-br from-red-500 to-red-600'
+    }
+  }
+  
+  // Ícone padrão
+  return { 
+    icon: Globe, 
+    gradient: 'from-violet-500 to-purple-600',
+    bgColor: 'bg-gradient-to-br from-violet-500 to-purple-600'
+  }
+}
+
+// Cores por segmento
+const segmentColors = {
+  'E-commerce': { bg: 'bg-emerald-500', text: 'text-emerald-700', light: 'bg-emerald-100', dot: 'bg-emerald-500' },
+  'Negócio Local': { bg: 'bg-blue-500', text: 'text-blue-700', light: 'bg-blue-100', dot: 'bg-blue-500' },
+  'Infoproduto': { bg: 'bg-purple-500', text: 'text-purple-700', light: 'bg-purple-100', dot: 'bg-purple-500' },
+  'Inside Sales': { bg: 'bg-orange-500', text: 'text-orange-700', light: 'bg-orange-100', dot: 'bg-orange-500' },
+  'Lançamento': { bg: 'bg-pink-500', text: 'text-pink-700', light: 'bg-pink-100', dot: 'bg-pink-500' },
+  'Food service': { bg: 'bg-amber-500', text: 'text-amber-700', light: 'bg-amber-100', dot: 'bg-amber-500' },
+  'Serviços online': { bg: 'bg-cyan-500', text: 'text-cyan-700', light: 'bg-cyan-100', dot: 'bg-cyan-500' },
+}
+
+const getSegmentColor = (segmento) => {
+  return segmentColors[segmento] || { bg: 'bg-slate-500', text: 'text-slate-700', light: 'bg-slate-100', dot: 'bg-slate-400' }
+}
 
 // Sugestões de plataformas por segmento
-const PLATFORM_SUGGESTIONS = {
-  ecommerce: ['Shopify', 'Nuvemshop', 'WooCommerce', 'VTEX', 'Tray', 'Loja Integrada', 'Mercado Livre', 'Amazon'],
-  infoproduto: ['Hotmart', 'Eduzz', 'Monetizze', 'Kiwify', 'Braip', 'Perfect Pay', 'Lastlink'],
-  negocio_local: ['RD Station', 'Pipedrive', 'HubSpot', 'Kommo', 'Bitrix24', 'Pipefy'],
-  inside_sales: ['RD Station', 'Pipedrive', 'HubSpot', 'Kommo', 'Bitrix24', 'Salesforce'],
-  lancamento: ['Hotmart', 'Eduzz', 'ActiveCampaign', 'RD Station', 'Leadlovers'],
-  food_service: ['iFood', 'Rappi', 'Goomer', 'Neemo', 'Anota Aí'],
-  servicos_online: ['Calendly', 'Notion', 'Trello', 'Asana', 'Monday'],
-}
-
-// Credenciais padrão que todos os clientes devem ter
-const STANDARD_CREDENTIALS = [
-  { platform_name: 'Instagram', credential_type: 'standard', icon: 'instagram' },
-  { platform_name: 'Facebook', credential_type: 'standard', icon: 'facebook' },
-  { platform_name: 'E-mail', credential_type: 'standard', icon: 'email' },
-]
-
-// Status
-const STATUS_OPTIONS = [
-  { value: 'ativo', label: 'Ativo', color: 'bg-green-500' },
-  { value: 'pausado', label: 'Pausado', color: 'bg-yellow-500' },
-  { value: 'cancelado', label: 'Cancelado', color: 'bg-red-500' },
-]
-
-// Componente de Badge para credenciais
-function CredentialBadge({ count }) {
-  if (!count || count === 0) return null
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-500/20 text-violet-300 border border-violet-500/30">
-      <FiKey className="w-3 h-3" />
-      Acessos
-    </span>
-  )
-}
-
-// Componente de Card de Credencial (modo visualização)
-function CredentialCard({ credential, onCopy }) {
-  const [showPassword, setShowPassword] = useState(false)
-  const [copied, setCopied] = useState({ login: false, password: false })
-
-  const handleCopy = async (text, field) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(prev => ({ ...prev, [field]: true }))
-      onCopy?.(`${credential.platform_name} - ${field}`)
-      setTimeout(() => setCopied(prev => ({ ...prev, [field]: false })), 2000)
-    } catch (err) {
-      console.error('Erro ao copiar:', err)
-    }
-  }
-
-  const getIcon = () => {
-    const name = credential.platform_name?.toLowerCase()
-    if (name?.includes('instagram')) return <FiInstagram className="w-5 h-5 text-pink-400" />
-    if (name?.includes('facebook')) return <FiFacebook className="w-5 h-5 text-blue-400" />
-    if (name?.includes('email') || name?.includes('e-mail')) return <FiMail className="w-5 h-5 text-amber-400" />
-    return <FiKey className="w-5 h-5 text-violet-400" />
-  }
-
-  return (
-    <div className="bg-[#1a1a2e]/50 rounded-lg p-4 border border-violet-500/20 hover:border-violet-500/40 transition-all">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="p-2 rounded-lg bg-violet-500/10">
-          {getIcon()}
-        </div>
-        <div>
-          <h4 className="font-medium text-white">{credential.platform_name}</h4>
-          <span className="text-xs text-gray-500">
-            {credential.credential_type === 'standard' ? 'Padrão' : 'Personalizado'}
-          </span>
-        </div>
-      </div>
-
-      {credential.login && (
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs text-gray-400 w-16">Login:</span>
-          <span className="text-sm text-gray-200 flex-1 truncate">{credential.login}</span>
-          <button
-            onClick={() => handleCopy(credential.login, 'login')}
-            className="p-1.5 rounded hover:bg-white/10 transition-colors"
-            title="Copiar login"
-          >
-            {copied.login ? <FiCheck className="w-4 h-4 text-green-400" /> : <FiCopy className="w-4 h-4 text-gray-400" />}
-          </button>
-        </div>
-      )}
-
-      {credential.password && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400 w-16">Senha:</span>
-          <span className="text-sm text-gray-200 flex-1 truncate font-mono">
-            {showPassword ? credential.password : '••••••••'}
-          </span>
-          <button
-            onClick={() => setShowPassword(!showPassword)}
-            className="p-1.5 rounded hover:bg-white/10 transition-colors"
-            title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-          >
-            {showPassword ? <FiEyeOff className="w-4 h-4 text-gray-400" /> : <FiEye className="w-4 h-4 text-gray-400" />}
-          </button>
-          <button
-            onClick={() => handleCopy(credential.password, 'password')}
-            className="p-1.5 rounded hover:bg-white/10 transition-colors"
-            title="Copiar senha"
-          >
-            {copied.password ? <FiCheck className="w-4 h-4 text-green-400" /> : <FiCopy className="w-4 h-4 text-gray-400" />}
-          </button>
-        </div>
-      )}
-
-      {credential.notes && (
-        <p className="text-xs text-gray-500 mt-2 italic">{credential.notes}</p>
-      )}
-    </div>
-  )
-}
-
-// Componente de Form de Credencial (modo edição)
-function CredentialFormCard({ credential, index, onChange, onRemove, isStandard }) {
-  const [showPassword, setShowPassword] = useState(false)
-
-  const handleChange = (field, value) => {
-    onChange(index, { ...credential, [field]: value })
-  }
-
-  const getIcon = () => {
-    const name = credential.platform_name?.toLowerCase()
-    if (name?.includes('instagram')) return <FiInstagram className="w-5 h-5 text-pink-400" />
-    if (name?.includes('facebook')) return <FiFacebook className="w-5 h-5 text-blue-400" />
-    if (name?.includes('email') || name?.includes('e-mail')) return <FiMail className="w-5 h-5 text-amber-400" />
-    return <FiKey className="w-5 h-5 text-violet-400" />
-  }
-
-  return (
-    <div className="bg-[#1a1a2e]/50 rounded-lg p-4 border border-violet-500/20">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-violet-500/10">
-            {getIcon()}
-          </div>
-          {isStandard ? (
-            <div>
-              <h4 className="font-medium text-white">{credential.platform_name}</h4>
-              <span className="text-xs text-violet-400">Credencial padrão</span>
-            </div>
-          ) : (
-            <input
-              type="text"
-              value={credential.platform_name}
-              onChange={(e) => handleChange('platform_name', e.target.value)}
-              placeholder="Nome da plataforma"
-              className="bg-transparent border-b border-gray-600 focus:border-violet-500 text-white placeholder-gray-500 outline-none px-1 py-0.5"
-            />
-          )}
-        </div>
-        {!isStandard && (
-          <button
-            onClick={() => onRemove(index)}
-            className="p-1.5 rounded hover:bg-red-500/20 text-red-400 transition-colors"
-            title="Remover credencial"
-          >
-            <FiTrash2 className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      <div className="space-y-3">
-        <div>
-          <label className="text-xs text-gray-400 block mb-1">Login / Usuário</label>
-          <input
-            type="text"
-            value={credential.login || ''}
-            onChange={(e) => handleChange('login', e.target.value)}
-            placeholder="Digite o login"
-            className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-violet-500 outline-none text-sm"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs text-gray-400 block mb-1">Senha</label>
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={credential.password || ''}
-              onChange={(e) => handleChange('password', e.target.value)}
-              placeholder="Digite a senha"
-              className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 pr-10 text-white placeholder-gray-500 focus:border-violet-500 outline-none text-sm font-mono"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-            >
-              {showPassword ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <label className="text-xs text-gray-400 block mb-1">Notas (opcional)</label>
-          <input
-            type="text"
-            value={credential.notes || ''}
-            onChange={(e) => handleChange('notes', e.target.value)}
-            placeholder="Observações adicionais"
-            className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-violet-500 outline-none text-sm"
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Componente Cofre de Acessos
-function CredentialsVault({ credentials, isEditing, onChange, segmento }) {
-  const [copiedMessage, setCopiedMessage] = useState('')
-
-  const handleCopy = (message) => {
-    setCopiedMessage(message)
-    setTimeout(() => setCopiedMessage(''), 2000)
-  }
-
-  const handleAddCredential = (platformName = '') => {
-    const newCredential = {
-      platform_name: platformName,
-      credential_type: 'custom',
-      login: '',
-      password: '',
-      notes: ''
-    }
-    onChange([...credentials, newCredential])
-  }
-
-  const handleRemoveCredential = (index) => {
-    const newCredentials = credentials.filter((_, i) => i !== index)
-    onChange(newCredentials)
-  }
-
-  const handleCredentialChange = (index, updatedCredential) => {
-    const newCredentials = [...credentials]
-    newCredentials[index] = updatedCredential
-    onChange(newCredentials)
-  }
-
-  const suggestions = PLATFORM_SUGGESTIONS[segmento] || []
-  const usedPlatforms = credentials.map(c => c.platform_name?.toLowerCase())
-  const availableSuggestions = suggestions.filter(s => !usedPlatforms.includes(s.toLowerCase()))
-
-  if (!isEditing) {
-    // Modo visualização
-    const filledCredentials = credentials.filter(c => c.login || c.password)
-    
-    if (filledCredentials.length === 0) {
-      return (
-        <div className="text-center py-8">
-          <FiLock className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-400">Nenhum acesso cadastrado</p>
-          <p className="text-sm text-gray-500 mt-1">Edite o cliente para adicionar credenciais</p>
-        </div>
-      )
-    }
-
-    return (
-      <div className="space-y-4">
-        {copiedMessage && (
-          <div className="fixed bottom-4 right-4 bg-violet-600 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in z-50">
-            <FiCheck className="inline-block mr-2" />
-            Copiado: {copiedMessage}
-          </div>
-        )}
-        
-        <div className="flex items-center gap-2 mb-4">
-          <FiShield className="w-5 h-5 text-violet-400" />
-          <h3 className="text-lg font-semibold text-white">Credenciais Salvas</h3>
-        </div>
-
-        <div className="grid gap-3">
-          {filledCredentials.map((cred, index) => (
-            <CredentialCard key={index} credential={cred} onCopy={handleCopy} />
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  // Modo edição
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <FiKey className="w-5 h-5 text-violet-400" />
-        <h3 className="text-lg font-semibold text-white">Gerenciar Acessos</h3>
-      </div>
-
-      {/* Credenciais padrão */}
-      <div className="space-y-3">
-        <p className="text-xs text-gray-400 uppercase tracking-wider">Credenciais Padrão</p>
-        {credentials
-          .filter(c => c.credential_type === 'standard')
-          .map((cred, index) => {
-            const realIndex = credentials.findIndex(c => c === cred)
-            return (
-              <CredentialFormCard
-                key={`standard-${index}`}
-                credential={cred}
-                index={realIndex}
-                onChange={handleCredentialChange}
-                onRemove={handleRemoveCredential}
-                isStandard={true}
-              />
-            )
-          })}
-      </div>
-
-      {/* Credenciais personalizadas */}
-      <div className="space-y-3 mt-6">
-        <p className="text-xs text-gray-400 uppercase tracking-wider">Credenciais Adicionais</p>
-        {credentials
-          .filter(c => c.credential_type !== 'standard')
-          .map((cred, index) => {
-            const realIndex = credentials.findIndex(c => c === cred)
-            return (
-              <CredentialFormCard
-                key={`custom-${index}`}
-                credential={cred}
-                index={realIndex}
-                onChange={handleCredentialChange}
-                onRemove={handleRemoveCredential}
-                isStandard={false}
-              />
-            )
-          })}
-      </div>
-
-      {/* Sugestões e botão adicionar */}
-      <div className="mt-6 pt-4 border-t border-gray-700">
-        <p className="text-xs text-gray-400 mb-3">Adicionar novo acesso:</p>
-        
-        {availableSuggestions.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-3">
-            {availableSuggestions.slice(0, 5).map((platform) => (
-              <button
-                key={platform}
-                type="button"
-                onClick={() => handleAddCredential(platform)}
-                className="px-3 py-1.5 text-xs bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 rounded-full border border-violet-500/30 transition-colors"
-              >
-                + {platform}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={() => handleAddCredential('')}
-          className="flex items-center gap-2 px-4 py-2 bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 rounded-lg border border-violet-500/30 transition-colors text-sm"
-        >
-          <FiPlus className="w-4 h-4" />
-          Adicionar Acesso Personalizado
-        </button>
-      </div>
-    </div>
-  )
+const platformSuggestions = {
+  'E-commerce': ['Shopify', 'Nuvemshop', 'WooCommerce', 'VTEX', 'Tray', 'Loja Integrada', 'Mercado Livre', 'Amazon'],
+  'Infoproduto': ['Hotmart', 'Eduzz', 'Monetizze', 'Kiwify', 'Braip', 'Perfect Pay', 'Lastlink'],
+  'Negócio Local': ['RD Station', 'Pipedrive', 'HubSpot', 'Kommo', 'Bitrix24', 'Pipefy'],
+  'Inside Sales': ['RD Station', 'Pipedrive', 'HubSpot', 'Salesforce', 'Kommo', 'Bitrix24'],
+  'Lançamento': ['Hotmart', 'Eduzz', 'ActiveCampaign', 'RD Station', 'Leadlovers'],
+  'Food service': ['iFood', 'Rappi', 'Goomer', 'Neemo', 'Anota Aí'],
+  'Serviços online': ['Calendly', 'Notion', 'Trello', 'Asana', 'Monday'],
 }
 
 export default function ClientesPage() {
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState('todos')
-  const [filterSegmento, setFilterSegmento] = useState('todos')
-  const [showFilters, setShowFilters] = useState(false)
-  
-  // Modal states
-  const [showModal, setShowModal] = useState(false)
-  const [modalMode, setModalMode] = useState('view') // 'view', 'add', 'edit'
+  const [searchTerm, setSearchTerm] = useState('')
+  const [segmentoFilter, setSegmentoFilter] = useState('todos')
+  const [activeTab, setActiveTab] = useState('ativos') // 'ativos' ou 'arquivados'
   const [selectedClient, setSelectedClient] = useState(null)
-  const [activeTab, setActiveTab] = useState('info') // 'info', 'credentials'
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [clientToDelete, setClientToDelete] = useState(null)
+  const [editingClient, setEditingClient] = useState(null)
   const [saving, setSaving] = useState(false)
-  
-  // Form state
-  const [formData, setFormData] = useState({})
-  const [credentials, setCredentials] = useState([])
+  const [notification, setNotification] = useState(null)
+  const [segmentos, setSegmentos] = useState([])
 
-  // Fetch clients
-  const fetchClients = useCallback(async () => {
+  const emptyClient = {
+    status: 'Ativo', nome_empresa: '', modelo_pagamento: 'Fixo', tag: '', nome_cliente: '',
+    segmento: '', nicho: '', faturamento_medio: '', genero: '', aniversario: '',
+    servicos_contratados: '', numero: '', cnpj_cpf: '', email: '', endereco: '',
+    numero_endereco: '', cep: '', cidade: '', estado: '', valor_servico: '',
+    dia_pagamento: '', canal_venda: '', data_inicio: '', data_encerramento: ''
+  }
+
+  useEffect(() => { fetchClients() }, [segmentoFilter])
+  useEffect(() => { if (notification) { const t = setTimeout(() => setNotification(null), 3000); return () => clearTimeout(t) } }, [notification])
+
+  const fetchClients = async () => {
     try {
       setLoading(true)
       const params = new URLSearchParams()
-      if (filterStatus !== 'todos') params.append('status', filterStatus)
-      if (filterSegmento !== 'todos') params.append('segmento', filterSegmento)
-      if (search) params.append('search', search)
-
-      const res = await fetch(`/api/clientes?${params}`)
-      const data = await res.json()
-      
-      if (data.error) {
-        setError(data.error)
-      } else {
-        setClients(data.clients || [])
+      if (segmentoFilter !== 'todos') params.append('segmento', segmentoFilter)
+      const response = await fetch(`/api/clientes?${params.toString()}`)
+      const data = await response.json()
+      if (data.clients) {
+        setClients(data.clients)
+        setSegmentos([...new Set(data.clients.map(c => c.segmento).filter(Boolean))].sort())
       }
-    } catch (err) {
-      console.error('Erro ao buscar clientes:', err)
-      setError('Erro ao carregar clientes')
-    } finally {
-      setLoading(false)
-    }
-  }, [filterStatus, filterSegmento, search])
+    } catch (error) {
+      showNotification('Erro ao carregar clientes', 'error')
+    } finally { setLoading(false) }
+  }
 
-  useEffect(() => {
-    fetchClients()
-  }, [fetchClients])
+  const showNotification = (message, type = 'success') => setNotification({ message, type })
 
-  // Fetch credentials for a client
-  const fetchCredentials = async (clientId) => {
+  const handleAddClient = async (clientData, credentials) => {
+    setSaving(true)
     try {
-      const res = await fetch(`/api/clientes/credentials?client_id=${clientId}`)
-      const data = await res.json()
-      return data.credentials || []
-    } catch (err) {
-      console.error('Erro ao buscar credenciais:', err)
-      return []
-    }
-  }
-
-  // Initialize credentials with standards
-  const initializeCredentials = (existingCredentials = []) => {
-    const standardPlatforms = STANDARD_CREDENTIALS.map(s => s.platform_name.toLowerCase())
-    const existingPlatforms = existingCredentials.map(c => c.platform_name?.toLowerCase())
-    
-    // Add missing standard credentials
-    const missingStandards = STANDARD_CREDENTIALS
-      .filter(s => !existingPlatforms.includes(s.platform_name.toLowerCase()))
-      .map(s => ({
-        platform_name: s.platform_name,
-        credential_type: 'standard',
-        login: '',
-        password: '',
-        notes: ''
-      }))
-    
-    // Mark existing standard credentials
-    const markedExisting = existingCredentials.map(c => ({
-      ...c,
-      credential_type: standardPlatforms.includes(c.platform_name?.toLowerCase()) ? 'standard' : 'custom'
-    }))
-    
-    // Standards first, then custom
-    const standards = [...missingStandards, ...markedExisting.filter(c => c.credential_type === 'standard')]
-    const customs = markedExisting.filter(c => c.credential_type !== 'standard')
-    
-    return [...standards, ...customs]
-  }
-
-  // Open modal
-  const openModal = async (mode, client = null) => {
-    setModalMode(mode)
-    setSelectedClient(client)
-    setActiveTab('info')
-    
-    if (mode === 'add') {
-      setFormData({
-        nome_empresa: '',
-        nome_cliente: '',
-        tag: '',
-        segmento: '',
-        status: 'ativo',
-        telefone: '',
-        email: '',
-        valor_servico: '',
-        dia_pagamento: '',
-        data_inicio: '',
-        data_encerramento: '',
-        servicos_contratados: '',
-        observacoes: '',
-        aniversario: '',
-        faturamento_medio: '',
+      const response = await fetch('/api/clientes', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ ...clientData, credentials }) 
       })
-      setCredentials(initializeCredentials([]))
-    } else if (client) {
-      setFormData({ ...client })
-      const existingCredentials = await fetchCredentials(client.id)
-      setCredentials(initializeCredentials(existingCredentials))
-    }
-    
-    setShowModal(true)
-  }
-
-  // Close modal
-  const closeModal = () => {
-    setShowModal(false)
-    setSelectedClient(null)
-    setFormData({})
-    setCredentials([])
-    setActiveTab('info')
-  }
-
-  // Handle form change
-  const handleFormChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-  }
-
-  // Save client
-  const handleSave = async () => {
-    try {
-      setSaving(true)
+      const data = await response.json()
       
-      const payload = {
-        ...formData,
-        credentials
+      if (response.ok) { 
+        // Verificar se as pastas foram criadas
+        if (data.drive?.success) {
+          if (data.drive.alreadyExisted) {
+            showNotification('Cliente adicionado! Pasta já existia no Drive.')
+          } else {
+            showNotification('Cliente adicionado e pastas criadas no Drive!')
+          }
+        } else {
+          showNotification('Cliente adicionado! (Erro ao criar pastas no Drive)')
+        }
+        setShowAddModal(false)
+        fetchClients() 
       }
-
-      const isEdit = modalMode === 'edit' && selectedClient?.id
-      const url = '/api/clientes'
-      const method = isEdit ? 'PUT' : 'POST'
-
-      if (isEdit) {
-        payload.id = selectedClient.id
-      }
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-
-      const data = await res.json()
-
-      if (data.error) {
-        setError(data.error)
-        return
-      }
-
-      await fetchClients()
-      closeModal()
-    } catch (err) {
-      console.error('Erro ao salvar cliente:', err)
-      setError('Erro ao salvar cliente')
-    } finally {
-      setSaving(false)
-    }
+      else showNotification(data.error || 'Erro ao adicionar cliente', 'error')
+    } catch { showNotification('Erro ao adicionar cliente', 'error') }
+    finally { setSaving(false) }
   }
 
-  // Delete client
-  const handleDelete = async (clientId) => {
-    if (!confirm('Tem certeza que deseja excluir este cliente?')) return
-
+  const handleUpdateClient = async (clientData, credentials) => {
+    setSaving(true)
     try {
-      const res = await fetch(`/api/clientes?id=${clientId}`, { method: 'DELETE' })
-      const data = await res.json()
-
-      if (data.error) {
-        setError(data.error)
-        return
-      }
-
-      await fetchClients()
-      if (selectedClient?.id === clientId) {
-        closeModal()
-      }
-    } catch (err) {
-      console.error('Erro ao excluir cliente:', err)
-      setError('Erro ao excluir cliente')
-    }
+      const response = await fetch('/api/clientes', { 
+        method: 'PUT', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ ...clientData, credentials }) 
+      })
+      if (response.ok) { showNotification('Cliente atualizado!'); setShowEditModal(false); setEditingClient(null); setSelectedClient(null); fetchClients() }
+      else showNotification('Erro ao atualizar cliente', 'error')
+    } catch { showNotification('Erro ao atualizar cliente', 'error') }
+    finally { setSaving(false) }
   }
 
-  // Get segmento info
-  const getSegmentoInfo = (segmento) => {
-    return SEGMENTOS.find(s => s.value === segmento) || { label: segmento, color: 'from-gray-500 to-gray-600' }
+  const handleDeleteClient = async () => {
+    if (!clientToDelete) return
+    setSaving(true)
+    try {
+      const response = await fetch(`/api/clientes?id=${clientToDelete.id}`, { method: 'DELETE' })
+      if (response.ok) { showNotification('Cliente excluído!'); setShowDeleteModal(false); setClientToDelete(null); setSelectedClient(null); fetchClients() }
+      else showNotification('Erro ao excluir cliente', 'error')
+    } catch { showNotification('Erro ao excluir cliente', 'error') }
+    finally { setSaving(false) }
   }
 
-  // Get status info
-  const getStatusInfo = (status) => {
-    return STATUS_OPTIONS.find(s => s.value === status) || { label: status, color: 'bg-gray-500' }
+  const handleToggleStatus = async (client) => {
+    const newStatus = client.status === 'Ativo' ? 'Inativo' : 'Ativo'
+    await handleUpdateClient({ 
+      ...client, 
+      status: newStatus, 
+      data_encerramento: newStatus === 'Inativo' ? new Date().toISOString().split('T')[0] : client.data_encerramento 
+    }, null)
   }
+
+  const openEditModal = (client) => { setEditingClient({ ...client }); setShowEditModal(true); setSelectedClient(null) }
+  const openDeleteModal = (client) => { setClientToDelete(client); setShowDeleteModal(true); setSelectedClient(null) }
+
+  // Filtrar por aba (ativos/arquivados) e depois por busca
+  const filteredClients = clients
+    .filter(client => {
+      // Filtro por aba
+      if (activeTab === 'ativos') return client.status === 'Ativo'
+      if (activeTab === 'arquivados') return client.status === 'Inativo'
+      return true
+    })
+    .filter(client => {
+      // Filtro por busca
+      if (!searchTerm) return true
+      const search = searchTerm.toLowerCase()
+      return client.nome_empresa?.toLowerCase().includes(search) || client.nome_cliente?.toLowerCase().includes(search) || client.tag?.toLowerCase().includes(search)
+    })
+
+  const stats = {
+    total: clients.length,
+    ativos: clients.filter(c => c.status === 'Ativo').length,
+    inativos: clients.filter(c => c.status === 'Inativo').length,
+    mrr: clients.filter(c => c.status === 'Ativo').reduce((sum, c) => sum + (parseFloat(c.valor_servico) || 0), 0)
+  }
+
+  const formatCurrency = (value) => !value ? '-' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+  const formatDate = (dateStr) => { if (!dateStr) return '-'; try { return new Date(dateStr).toLocaleDateString('pt-BR') } catch { return dateStr } }
+  const formatPhone = (phone) => { if (!phone) return '-'; const p = String(phone); return p.length === 13 ? `+${p.slice(0,2)} (${p.slice(2,4)}) ${p.slice(4,9)}-${p.slice(9)}` : p }
+
+  // Segmentos ativos para a legenda
+  const activeSegments = [...new Set(clients.map(c => c.segmento).filter(Boolean))].sort()
 
   return (
-    <div className="min-h-screen bg-[#0d0d1a] p-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Clientes</h1>
-          <p className="text-gray-400 text-sm">Gerencie sua carteira de clientes</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      {/* Notification */}
+      {notification && (
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl backdrop-blur-sm border ${
+          notification.type === 'error' ? 'bg-red-500/95 text-white border-red-400' : 'bg-emerald-500/95 text-white border-emerald-400'
+        } animate-slideIn`}>
+          {notification.type === 'error' ? <XCircle size={22} /> : <CheckCircle size={22} />}
+          <span className="font-medium">{notification.message}</span>
         </div>
-        
-        <button
-          onClick={() => openModal('add')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-lg transition-all shadow-lg shadow-violet-500/25"
-        >
-          <FiPlus className="w-5 h-5" />
-          Novo Cliente
-        </button>
-      </div>
+      )}
 
-      {/* Search and Filters */}
-      <div className="bg-[#1a1a2e] rounded-xl p-4 mb-6 border border-gray-800">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar cliente..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-gray-500 focus:border-violet-500 outline-none"
-            />
-          </div>
+      <div className="p-8 max-w-[1600px] mx-auto">
+        {/* Premium Header */}
+        <div className="relative mb-10">
+          <div className="absolute inset-0 bg-gradient-to-r from-franca-blue via-franca-blue/90 to-emerald-600 rounded-3xl opacity-95" />
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOCAxOC04LjA1OSAxOC0xOC04LjA1OS0xOC0xOC0xOHoiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLW9wYWNpdHk9Ii4wNSIvPjwvZz48L3N2Zz4=')] opacity-30 rounded-3xl" />
           
+          <div className="relative px-8 py-10 flex items-center justify-between">
+            <div className="flex items-center gap-5">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30 shadow-lg">
+                <Building2 size={32} className="text-white" />
+              </div>
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <h1 className="text-3xl font-bold text-white">Clientes</h1>
+                  <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm text-white/90 border border-white/20">
+                    {stats.total} cadastrados
+                  </span>
+                </div>
+                <p className="text-white/70 text-lg">Gerencie sua carteira de clientes</p>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="group flex items-center gap-3 bg-white text-franca-blue font-semibold px-6 py-4 rounded-2xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+            >
+              <div className="w-10 h-10 bg-franca-green rounded-xl flex items-center justify-center group-hover:rotate-90 transition-transform duration-300">
+                <Plus size={22} />
+              </div>
+              <span>Novo Cliente</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Cards Premium */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+          <StatCard icon={Users} label="Total de Clientes" value={stats.total} color="blue" />
+          <StatCard icon={Zap} label="Clientes Ativos" value={stats.ativos} color="green" />
+          <StatCard icon={Clock} label="Clientes Inativos" value={stats.inativos} color="red" />
+          <StatCard icon={TrendingUp} label="MRR Atual" value={formatCurrency(stats.mrr)} color="emerald" isCurrency />
+        </div>
+
+        {/* Search & Filters Premium */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-4">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1 relative group">
+              <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-franca-blue transition-colors" />
+              <input
+                type="text"
+                placeholder="Buscar por empresa, cliente ou tag..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 border-0 rounded-xl focus:ring-2 focus:ring-franca-green focus:bg-white transition-all text-slate-700 placeholder:text-slate-400"
+              />
+            </div>
+            
+            <div className="flex gap-3">
+              <div className="relative">
+                <select
+                  value={segmentoFilter}
+                  onChange={(e) => setSegmentoFilter(e.target.value)}
+                  className="appearance-none pl-4 pr-10 py-4 bg-slate-50 border-0 rounded-xl focus:ring-2 focus:ring-franca-green cursor-pointer font-medium text-slate-700 min-w-[180px]"
+                >
+                  <option value="todos">Todos Segmentos</option>
+                  {segmentos.map(seg => <option key={seg} value={seg}>{seg}</option>)}
+                </select>
+                <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Legenda de Segmentos */}
+        <div className="bg-white rounded-2xl px-5 py-3 shadow-sm border border-slate-100 mb-4">
+          <div className="flex items-center gap-6 flex-wrap">
+            <span className="text-sm text-slate-500 font-medium">Segmentos:</span>
+            {activeSegments.map(seg => {
+              const colors = getSegmentColor(seg)
+              return (
+                <div key={seg} className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${colors.dot}`} />
+                  <span className="text-sm text-slate-600">{seg}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Abas Ativos / Arquivados */}
+        <div className="flex gap-2 mb-8">
           <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-colors ${
-              showFilters ? 'bg-violet-600 border-violet-500 text-white' : 'bg-[#0d0d1a] border-gray-700 text-gray-400 hover:text-white'
+            onClick={() => setActiveTab('ativos')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+              activeTab === 'ativos'
+                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                : 'bg-white text-slate-600 border border-slate-200 hover:border-emerald-300 hover:text-emerald-600'
             }`}
           >
-            <FiFilter className="w-4 h-4" />
-            Filtros
+            <Zap size={18} />
+            Ativos
+            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
+              activeTab === 'ativos' ? 'bg-white/20' : 'bg-emerald-100 text-emerald-700'
+            }`}>
+              {stats.ativos}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('arquivados')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+              activeTab === 'arquivados'
+                ? 'bg-red-500 text-white shadow-lg shadow-red-500/25'
+                : 'bg-white text-slate-600 border border-slate-200 hover:border-red-300 hover:text-red-600'
+            }`}
+          >
+            <Archive size={18} />
+            Arquivados
+            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
+              activeTab === 'arquivados' ? 'bg-white/20' : 'bg-red-100 text-red-700'
+            }`}>
+              {stats.inativos}
+            </span>
           </button>
         </div>
 
-        {showFilters && (
-          <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-gray-700">
-            <div>
-              <label className="text-xs text-gray-400 block mb-1">Status</label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-violet-500 outline-none"
-              >
-                <option value="todos">Todos</option>
-                {STATUS_OPTIONS.map(s => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
+        {/* Clients Grid Premium */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-32">
+            <div className="w-16 h-16 bg-franca-green/20 rounded-full flex items-center justify-center mb-4">
+              <Loader size={32} className="animate-spin text-franca-green" />
             </div>
-            
-            <div>
-              <label className="text-xs text-gray-400 block mb-1">Segmento</label>
-              <select
-                value={filterSegmento}
-                onChange={(e) => setFilterSegmento(e.target.value)}
-                className="bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-violet-500 outline-none"
-              >
-                <option value="todos">Todos</option>
-                {SEGMENTOS.map(s => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
+            <p className="text-slate-500">Carregando clientes...</p>
+          </div>
+        ) : filteredClients.length === 0 ? (
+          <div className="text-center py-32 bg-white rounded-3xl border border-dashed border-slate-200">
+            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Building2 size={40} className="text-slate-300" />
             </div>
+            <h3 className="text-xl font-semibold text-slate-700 mb-2">Nenhum cliente encontrado</h3>
+            <p className="text-slate-500 mb-6">Tente ajustar os filtros ou adicione um novo cliente</p>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-franca-green text-franca-blue font-semibold rounded-xl hover:shadow-lg transition-all"
+            >
+              <Plus size={20} /> Adicionar Cliente
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filteredClients.map((client) => (
+              <ClientCard
+                key={client.id}
+                client={client}
+                onClick={() => setSelectedClient(client)}
+                formatCurrency={formatCurrency}
+              />
+            ))}
           </div>
         )}
       </div>
 
-      {/* Error message */}
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-6">
-          {error}
-          <button onClick={() => setError('')} className="float-right">
-            <FiX />
+      {/* Modals */}
+      {selectedClient && (
+        <ClientDetailModal
+          client={selectedClient}
+          onClose={() => setSelectedClient(null)}
+          onEdit={() => openEditModal(selectedClient)}
+          onDelete={() => openDeleteModal(selectedClient)}
+          onToggleStatus={() => handleToggleStatus(selectedClient)}
+          formatCurrency={formatCurrency}
+          formatDate={formatDate}
+          formatPhone={formatPhone}
+          showNotification={showNotification}
+        />
+      )}
+
+      {showAddModal && (
+        <ClientFormModal
+          title="Novo Cliente"
+          client={emptyClient}
+          onClose={() => setShowAddModal(false)}
+          onSave={handleAddClient}
+          saving={saving}
+        />
+      )}
+
+      {showEditModal && editingClient && (
+        <ClientFormModal
+          title="Editar Cliente"
+          client={editingClient}
+          onClose={() => { setShowEditModal(false); setEditingClient(null) }}
+          onSave={handleUpdateClient}
+          saving={saving}
+        />
+      )}
+
+      {showDeleteModal && clientToDelete && (
+        <DeleteConfirmModal
+          client={clientToDelete}
+          onClose={() => { setShowDeleteModal(false); setClientToDelete(null) }}
+          onConfirm={handleDeleteClient}
+          saving={saving}
+        />
+      )}
+
+      <style jsx global>{`
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slideIn { animation: slideIn 0.3s ease-out; }
+      `}</style>
+    </div>
+  )
+}
+
+// Stat Card Component
+function StatCard({ icon: Icon, label, value, color, isCurrency }) {
+  const colorClasses = {
+    blue: 'from-blue-500 to-blue-600 shadow-blue-500/25',
+    green: 'from-emerald-500 to-emerald-600 shadow-emerald-500/25',
+    red: 'from-red-500 to-red-600 shadow-red-500/25',
+    gray: 'from-slate-400 to-slate-500 shadow-slate-400/25',
+    emerald: 'from-teal-500 to-emerald-500 shadow-teal-500/25'
+  }
+  
+  return (
+    <div className="group bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-xl hover:border-slate-200 transition-all duration-300">
+      <div className="flex items-start justify-between mb-4">
+        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colorClasses[color]} shadow-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+          <Icon size={24} className="text-white" />
+        </div>
+        <ArrowUpRight size={18} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
+      </div>
+      <p className="text-slate-500 text-sm font-medium mb-1">{label}</p>
+      <p className={`font-bold ${isCurrency ? 'text-2xl' : 'text-3xl'} text-slate-800`}>{value}</p>
+    </div>
+  )
+}
+
+// Client Card Component
+function ClientCard({ client, onClick, formatCurrency }) {
+  const isActive = client.status === 'Ativo'
+  const segmentColor = getSegmentColor(client.segmento)
+  
+  // Pegar só a primeira letra do nome da empresa
+  const initial = client.nome_empresa?.charAt(0)?.toUpperCase() || '?'
+  const hasCredentials = client.credentials_count > 0
+  
+  return (
+    <div
+      onClick={onClick}
+      className="group bg-white rounded-2xl p-6 border border-slate-100 hover:border-franca-green/40 hover:shadow-xl cursor-pointer transition-all duration-300 relative overflow-hidden"
+    >
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-franca-green/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity" />
+      
+      {/* Header */}
+      <div className="flex items-start gap-4 mb-5">
+        <div className="relative">
+          <div className="w-14 h-14 bg-gradient-to-br from-franca-blue to-franca-blue/80 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+            <span className="text-white font-bold text-xl">{initial}</span>
+          </div>
+          <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white ${isActive ? 'bg-emerald-500' : 'bg-red-500'}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-slate-800 text-lg truncate group-hover:text-franca-blue transition-colors">
+            {client.nome_empresa || 'Sem nome'}
+          </h3>
+          <p className="text-slate-500 text-sm truncate">{client.nome_cliente || '-'}</p>
+        </div>
+      </div>
+
+      {/* Info Pills */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 ${segmentColor.light} ${segmentColor.text} rounded-lg text-xs font-medium`}>
+          <div className={`w-2 h-2 rounded-full ${segmentColor.dot}`} />
+          {client.segmento || 'N/A'}
+        </span>
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${
+          isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+        }`}>
+          {isActive ? <Zap size={12} /> : <Clock size={12} />} {client.status}
+        </span>
+        {hasCredentials && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-100 text-violet-700 rounded-lg text-xs font-medium">
+            <Key size={12} /> Acessos
+          </span>
+        )}
+        {client.pasta_drive && (
+          <a
+            href={client.pasta_drive}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-200 transition-colors"
+            title="Abrir pasta no Drive"
+          >
+            <FolderOpen size={12} /> Drive
+          </a>
+        )}
+      </div>
+
+      {/* Value */}
+      <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+        <div>
+          <p className="text-xs text-slate-400 mb-0.5">Valor mensal</p>
+          <p className="text-lg font-bold text-slate-800">{formatCurrency(client.valor_servico)}</p>
+        </div>
+        <div className="w-10 h-10 bg-franca-green/10 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <ArrowUpRight size={20} className="text-franca-green" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Client Detail Modal (Premium) with Credentials Vault
+function ClientDetailModal({ client, onClose, onEdit, onDelete, onToggleStatus, formatCurrency, formatDate, formatPhone, showNotification }) {
+  const [activeSection, setActiveSection] = useState('info') // 'info' ou 'credentials'
+  const [credentials, setCredentials] = useState([])
+  const [loadingCredentials, setLoadingCredentials] = useState(false)
+  
+  const isActive = client.status === 'Ativo'
+  const initial = client.nome_empresa?.charAt(0)?.toUpperCase() || '?'
+
+  useEffect(() => {
+    if (activeSection === 'credentials') {
+      fetchCredentials()
+    }
+  }, [activeSection])
+
+  const fetchCredentials = async () => {
+    setLoadingCredentials(true)
+    try {
+      const response = await fetch(`/api/clientes/credentials?client_id=${client.id}`)
+      const data = await response.json()
+      if (data.credentials) {
+        setCredentials(data.credentials)
+      }
+    } catch (error) {
+      console.error('Error fetching credentials:', error)
+    } finally {
+      setLoadingCredentials(false)
+    }
+  }
+  
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        {/* Header Premium */}
+        <div className="relative bg-gradient-to-r from-franca-blue to-franca-blue/90 px-8 py-8">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOCAxOC04LjA1OSAxOC0xOC04LjA1OS0xOC0xOC0xOHoiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLW9wYWNpdHk9Ii4wNSIvPjwvZz48L3N2Zz4=')] opacity-20" />
+          
+          <button 
+            onClick={onClose} 
+            className="absolute top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <X size={24} className="text-white" />
+          </button>
+          
+          <div className="relative flex items-center gap-5">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30">
+              <span className="text-white font-bold text-3xl">{initial}</span>
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-2">{client.nome_empresa}</h2>
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  isActive ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30' : 'bg-red-500/20 text-red-200 border border-red-400/30'
+                }`}>
+                  {isActive ? '● Ativo' : '○ Inativo'}
+                </span>
+                <span className="text-white/60">•</span>
+                <span className="text-white/80">{client.segmento}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="px-8 py-4 bg-slate-50 border-b border-slate-100 flex gap-3 flex-wrap">
+          {client.pasta_drive && (
+            <a 
+              href={client.pasta_drive} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 text-white rounded-xl hover:bg-amber-600 hover:shadow-lg transition-all font-medium"
+            >
+              <FolderOpen size={16} /> Abrir Drive
+            </a>
+          )}
+          <button onClick={onEdit} className="flex items-center gap-2 px-5 py-2.5 bg-franca-blue text-white rounded-xl hover:shadow-lg transition-all font-medium">
+            <Edit3 size={16} /> Editar
+          </button>
+          <button onClick={onToggleStatus} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all font-medium ${
+            isActive ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+          }`}>
+            {isActive ? <><XCircle size={16} /> Inativar</> : <><CheckCircle size={16} /> Ativar</>}
+          </button>
+          <button onClick={onDelete} className="flex items-center gap-2 px-5 py-2.5 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 transition-all font-medium">
+            <Trash2 size={16} /> Excluir
           </button>
         </div>
-      )}
 
-      {/* Clients Grid */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
+        {/* Tabs */}
+        <div className="px-8 py-3 border-b border-slate-100 flex gap-2">
+          <button
+            onClick={() => setActiveSection('info')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
+              activeSection === 'info'
+                ? 'bg-franca-blue text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <User size={16} /> Informações
+          </button>
+          <button
+            onClick={() => setActiveSection('credentials')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
+              activeSection === 'credentials'
+                ? 'bg-violet-600 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <Shield size={16} /> Cofre de Acessos
+          </button>
         </div>
-      ) : clients.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-400">Nenhum cliente encontrado</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {clients.map((client) => {
-            const segmento = getSegmentoInfo(client.segmento)
-            const status = getStatusInfo(client.status)
-            
-            return (
-              <div
-                key={client.id}
-                onClick={() => openModal('view', client)}
-                className="bg-[#1a1a2e] rounded-xl p-5 border border-gray-800 hover:border-violet-500/50 transition-all cursor-pointer group"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-white truncate group-hover:text-violet-300 transition-colors">
-                      {client.nome_empresa}
-                    </h3>
-                    {client.tag && (
-                      <span className="text-xs text-gray-500">@{client.tag}</span>
-                    )}
-                  </div>
-                  <div className={`w-2.5 h-2.5 rounded-full ${status.color}`} title={status.label}></div>
-                </div>
 
-                {client.nome_cliente && (
-                  <p className="text-sm text-gray-400 mb-3 truncate">{client.nome_cliente}</p>
-                )}
+        {/* Content - scroll instantâneo */}
+        <div className="p-8 overflow-y-auto max-h-[calc(90vh-340px)]" style={{ scrollBehavior: 'auto' }}>
+          {activeSection === 'info' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left Column */}
+              <div className="space-y-6">
+                <InfoSection icon={User} title="Dados do Cliente" color="blue">
+                  <InfoGrid>
+                    <InfoItem label="Nome" value={client.nome_cliente} />
+                    <InfoItem label="TAG" value={client.tag} />
+                    <InfoItem label="Gênero" value={client.genero} />
+                    <InfoItem label="Aniversário" value={formatDate(client.aniversario)} />
+                  </InfoGrid>
+                </InfoSection>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full bg-gradient-to-r ${segmento.color} text-white`}>
-                    {segmento.label}
-                  </span>
-                  <CredentialBadge count={client.credentials_count} />
-                </div>
+                <InfoSection icon={Phone} title="Contato" color="green">
+                  <InfoGrid>
+                    <InfoItem label="WhatsApp" value={formatPhone(client.numero)} />
+                    <InfoItem label="E-mail" value={client.email} truncate />
+                    <InfoItem label="CNPJ/CPF" value={client.cnpj_cpf} span={2} />
+                  </InfoGrid>
+                </InfoSection>
 
-                {client.valor_servico && (
-                  <div className="flex items-center gap-1 mt-3 text-sm text-green-400">
-                    <FiDollarSign className="w-4 h-4" />
-                    <span>R$ {Number(client.valor_servico).toLocaleString('pt-BR')}</span>
-                  </div>
-                )}
+                <InfoSection icon={MapPin} title="Endereço" color="purple">
+                  <InfoGrid>
+                    <InfoItem label="Logradouro" value={`${client.endereco || '-'}, ${client.numero_endereco || 'S/N'}`} span={2} />
+                    <InfoItem label="Cidade" value={client.cidade} />
+                    <InfoItem label="Estado" value={client.estado} />
+                    <InfoItem label="CEP" value={client.cep} span={2} />
+                  </InfoGrid>
+                </InfoSection>
               </div>
-            )
-          })}
-        </div>
-      )}
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1a1a2e] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden border border-gray-800">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-800">
-              <h2 className="text-lg font-semibold text-white">
-                {modalMode === 'add' ? 'Novo Cliente' : modalMode === 'edit' ? 'Editar Cliente' : formData.nome_empresa}
-              </h2>
-              <div className="flex items-center gap-2">
-                {modalMode === 'view' && (
-                  <>
-                    <button
-                      onClick={() => setModalMode('edit')}
-                      className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
-                    >
-                      <FiEdit2 className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(selectedClient?.id)}
-                      className="p-2 hover:bg-red-500/20 rounded-lg text-gray-400 hover:text-red-400 transition-colors"
-                    >
-                      <FiTrash2 className="w-5 h-5" />
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={closeModal}
-                  className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
-                >
-                  <FiX className="w-5 h-5" />
-                </button>
+              {/* Right Column */}
+              <div className="space-y-6">
+                <InfoSection icon={Briefcase} title="Serviço" color="orange">
+                  <InfoGrid>
+                    <InfoItem label="Segmento" value={client.segmento} />
+                    <InfoItem label="Nicho" value={client.nicho} />
+                    <InfoItem label="Serviços" value={client.servicos_contratados} span={2} />
+                    <InfoItem label="Fat. Médio" value={formatCurrency(client.faturamento_medio)} span={2} />
+                  </InfoGrid>
+                </InfoSection>
+
+                <InfoSection icon={DollarSign} title="Financeiro" color="emerald">
+                  <InfoGrid>
+                    <InfoItem label="Valor Mensal" value={formatCurrency(client.valor_servico)} highlight />
+                    <InfoItem label="Dia Pgto" value={client.dia_pagamento ? `Dia ${client.dia_pagamento}` : '-'} />
+                    <InfoItem label="Modelo" value={client.modelo_pagamento} />
+                    <InfoItem label="Canal de Venda" value={client.canal_venda} />
+                  </InfoGrid>
+                </InfoSection>
+
+                <InfoSection icon={Calendar} title="Histórico" color="slate">
+                  <InfoGrid>
+                    <InfoItem label="Data de Início" value={formatDate(client.data_inicio)} />
+                    <InfoItem label="Data de Encerramento" value={formatDate(client.data_encerramento)} />
+                  </InfoGrid>
+                </InfoSection>
               </div>
             </div>
+          ) : (
+            <CredentialsVault 
+              credentials={credentials} 
+              loading={loadingCredentials}
+              clientSegment={client.segmento}
+              showNotification={showNotification}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
-            {/* Tabs */}
-            <div className="flex border-b border-gray-800">
-              <button
-                onClick={() => setActiveTab('info')}
-                className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                  activeTab === 'info' 
-                    ? 'text-violet-400 border-b-2 border-violet-400' 
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                Informações
-              </button>
-              <button
-                onClick={() => setActiveTab('credentials')}
-                className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                  activeTab === 'credentials' 
-                    ? 'text-violet-400 border-b-2 border-violet-400' 
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <FiKey className="w-4 h-4" />
-                Cofre de Acessos
-              </button>
-            </div>
+// Credentials Vault Component (View Only)
+function CredentialsVault({ credentials, loading, clientSegment, showNotification }) {
+  const [visiblePasswords, setVisiblePasswords] = useState({})
+  
+  const togglePasswordVisibility = (id) => {
+    setVisiblePasswords(prev => ({ ...prev, [id]: !prev[id] }))
+  }
 
-            {/* Modal Content */}
-            <div className="p-4 overflow-y-auto max-h-[calc(90vh-180px)]">
-              {activeTab === 'info' ? (
-                modalMode === 'view' ? (
-                  // View Mode - Info
-                  <div className="space-y-4">
-                    {formData.nome_cliente && (
-                      <div>
-                        <label className="text-xs text-gray-400">Responsável</label>
-                        <p className="text-white">{formData.nome_cliente}</p>
-                      </div>
-                    )}
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      {formData.telefone && (
-                        <div className="flex items-center gap-2 text-gray-300">
-                          <FiPhone className="w-4 h-4 text-gray-500" />
-                          <span>{formData.telefone}</span>
-                        </div>
-                      )}
-                      {formData.email && (
-                        <div className="flex items-center gap-2 text-gray-300">
-                          <FiMail className="w-4 h-4 text-gray-500" />
-                          <span className="truncate">{formData.email}</span>
-                        </div>
-                      )}
-                    </div>
+  const copyToClipboard = async (text, type) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      showNotification(`${type} copiado!`)
+    } catch {
+      showNotification('Erro ao copiar', 'error')
+    }
+  }
 
-                    {formData.segmento && (
-                      <div>
-                        <label className="text-xs text-gray-400">Segmento</label>
-                        <p className="text-white">{getSegmentoInfo(formData.segmento).label}</p>
-                      </div>
-                    )}
+  // Separar credenciais padrão das específicas
+  const standardCredentials = credentials.filter(c => c.credential_type === 'standard')
+  const customCredentials = credentials.filter(c => c.credential_type === 'custom')
 
-                    <div className="grid grid-cols-2 gap-4">
-                      {formData.valor_servico && (
-                        <div>
-                          <label className="text-xs text-gray-400">Valor do Serviço</label>
-                          <p className="text-green-400">R$ {Number(formData.valor_servico).toLocaleString('pt-BR')}</p>
-                        </div>
-                      )}
-                      {formData.dia_pagamento && (
-                        <div>
-                          <label className="text-xs text-gray-400">Dia do Pagamento</label>
-                          <p className="text-white">Dia {formData.dia_pagamento}</p>
-                        </div>
-                      )}
-                    </div>
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <Loader size={32} className="animate-spin text-violet-500 mb-4" />
+        <p className="text-slate-500">Carregando acessos...</p>
+      </div>
+    )
+  }
 
-                    {formData.servicos_contratados && (
-                      <div>
-                        <label className="text-xs text-gray-400">Serviços Contratados</label>
-                        <p className="text-white">{formData.servicos_contratados}</p>
-                      </div>
-                    )}
+  if (credentials.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <div className="w-20 h-20 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Shield size={40} className="text-violet-400" />
+        </div>
+        <h3 className="text-xl font-semibold text-slate-700 mb-2">Nenhum acesso cadastrado</h3>
+        <p className="text-slate-500">Edite o cliente para adicionar credenciais</p>
+      </div>
+    )
+  }
 
-                    {formData.observacoes && (
-                      <div>
-                        <label className="text-xs text-gray-400">Observações</label>
-                        <p className="text-gray-300">{formData.observacoes}</p>
-                      </div>
-                    )}
+  return (
+    <div className="space-y-8">
+      {/* Header do Cofre */}
+      <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
+        <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+          <Shield size={24} className="text-white" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-slate-800">Cofre de Acessos</h3>
+          <p className="text-sm text-slate-500">{credentials.length} credencial(is) salva(s)</p>
+        </div>
+      </div>
 
-                    {formData.pasta_drive && (
-                      <a
-                        href={formData.pasta_drive}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-violet-400 hover:text-violet-300 transition-colors"
-                      >
-                        <FiFolder className="w-4 h-4" />
-                        Abrir pasta no Drive
-                        <FiExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                  </div>
-                ) : (
-                  // Edit/Add Mode - Info Form
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs text-gray-400 block mb-1">Nome da Empresa *</label>
-                        <input
-                          type="text"
-                          value={formData.nome_empresa || ''}
-                          onChange={(e) => handleFormChange('nome_empresa', e.target.value)}
-                          className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-400 block mb-1">Tag / Identificador</label>
-                        <input
-                          type="text"
-                          value={formData.tag || ''}
-                          onChange={(e) => handleFormChange('tag', e.target.value)}
-                          className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none"
-                          placeholder="@tag"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-gray-400 block mb-1">Nome do Responsável</label>
-                      <input
-                        type="text"
-                        value={formData.nome_cliente || ''}
-                        onChange={(e) => handleFormChange('nome_cliente', e.target.value)}
-                        className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs text-gray-400 block mb-1">Telefone</label>
-                        <input
-                          type="text"
-                          value={formData.telefone || ''}
-                          onChange={(e) => handleFormChange('telefone', e.target.value)}
-                          className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-400 block mb-1">E-mail</label>
-                        <input
-                          type="email"
-                          value={formData.email || ''}
-                          onChange={(e) => handleFormChange('email', e.target.value)}
-                          className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs text-gray-400 block mb-1">Segmento *</label>
-                        <select
-                          value={formData.segmento || ''}
-                          onChange={(e) => handleFormChange('segmento', e.target.value)}
-                          className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none"
-                          required
-                        >
-                          <option value="">Selecione...</option>
-                          {SEGMENTOS.map(s => (
-                            <option key={s.value} value={s.value}>{s.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-400 block mb-1">Status</label>
-                        <select
-                          value={formData.status || 'ativo'}
-                          onChange={(e) => handleFormChange('status', e.target.value)}
-                          className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none"
-                        >
-                          {STATUS_OPTIONS.map(s => (
-                            <option key={s.value} value={s.value}>{s.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs text-gray-400 block mb-1">Valor do Serviço (R$)</label>
-                        <input
-                          type="number"
-                          value={formData.valor_servico || ''}
-                          onChange={(e) => handleFormChange('valor_servico', e.target.value)}
-                          className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-400 block mb-1">Dia do Pagamento</label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="31"
-                          value={formData.dia_pagamento || ''}
-                          onChange={(e) => handleFormChange('dia_pagamento', e.target.value)}
-                          className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs text-gray-400 block mb-1">Data de Início</label>
-                        <input
-                          type="date"
-                          value={formData.data_inicio || ''}
-                          onChange={(e) => handleFormChange('data_inicio', e.target.value)}
-                          className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-400 block mb-1">Aniversário do Cliente</label>
-                        <input
-                          type="date"
-                          value={formData.aniversario || ''}
-                          onChange={(e) => handleFormChange('aniversario', e.target.value)}
-                          className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-gray-400 block mb-1">Serviços Contratados</label>
-                      <input
-                        type="text"
-                        value={formData.servicos_contratados || ''}
-                        onChange={(e) => handleFormChange('servicos_contratados', e.target.value)}
-                        className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none"
-                        placeholder="Ex: Social Media, Tráfego Pago, Copywriting"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-gray-400 block mb-1">Faturamento Médio (R$)</label>
-                      <input
-                        type="number"
-                        value={formData.faturamento_medio || ''}
-                        onChange={(e) => handleFormChange('faturamento_medio', e.target.value)}
-                        className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-gray-400 block mb-1">Observações</label>
-                      <textarea
-                        value={formData.observacoes || ''}
-                        onChange={(e) => handleFormChange('observacoes', e.target.value)}
-                        rows={3}
-                        className="w-full bg-[#0d0d1a] border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 outline-none resize-none"
-                      />
-                    </div>
-                  </div>
-                )
-              ) : (
-                // Credentials Tab
-                <CredentialsVault
-                  credentials={credentials}
-                  isEditing={modalMode !== 'view'}
-                  onChange={setCredentials}
-                  segmento={formData.segmento}
-                />
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            {modalMode !== 'view' && (
-              <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-800">
-                <button
-                  onClick={closeModal}
-                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-lg transition-all disabled:opacity-50"
-                >
-                  {saving ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Salvando...
-                    </>
-                  ) : (
-                    'Salvar'
-                  )}
-                </button>
-              </div>
-            )}
+      {/* Acessos Padrão */}
+      {standardCredentials.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Key size={14} /> Acessos Padrão
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {standardCredentials.map((cred) => (
+              <CredentialCard 
+                key={cred.id}
+                credential={cred}
+                isVisible={visiblePasswords[cred.id]}
+                onToggleVisibility={() => togglePasswordVisibility(cred.id)}
+                onCopy={copyToClipboard}
+              />
+            ))}
           </div>
         </div>
       )}
+
+      {/* Acessos Específicos */}
+      {customCredentials.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Globe size={14} /> Acessos Específicos ({clientSegment})
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {customCredentials.map((cred) => (
+              <CredentialCard 
+                key={cred.id}
+                credential={cred}
+                isVisible={visiblePasswords[cred.id]}
+                onToggleVisibility={() => togglePasswordVisibility(cred.id)}
+                onCopy={copyToClipboard}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Credential Card Component
+function CredentialCard({ credential, isVisible, onToggleVisibility, onCopy }) {
+  const { icon: PlatformIcon, bgColor } = getPlatformStyle(credential.platform_name)
+  
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-lg hover:border-violet-200 transition-all">
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`w-10 h-10 ${bgColor} rounded-xl flex items-center justify-center shadow-md`}>
+          <PlatformIcon size={20} className="text-white" />
+        </div>
+        <div>
+          <h5 className="font-semibold text-slate-800">{credential.platform_name}</h5>
+          <p className="text-xs text-slate-400">
+            {credential.credential_type === 'standard' ? 'Padrão' : 'Específico'}
+          </p>
+        </div>
+      </div>
+      
+      {/* Login */}
+      <div className="mb-3">
+        <label className="text-xs text-slate-500 mb-1 block">Login</label>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 bg-slate-50 rounded-lg px-3 py-2 text-sm text-slate-700 font-mono truncate">
+            {credential.login || '-'}
+          </div>
+          {credential.login && (
+            <button 
+              onClick={() => onCopy(credential.login, 'Login')}
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Copiar login"
+            >
+              <Copy size={16} className="text-slate-400" />
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* Senha */}
+      <div className="mb-3">
+        <label className="text-xs text-slate-500 mb-1 block">Senha</label>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 bg-slate-50 rounded-lg px-3 py-2 text-sm text-slate-700 font-mono truncate">
+            {credential.password ? (isVisible ? credential.password : '••••••••') : '-'}
+          </div>
+          {credential.password && (
+            <>
+              <button 
+                onClick={onToggleVisibility}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                title={isVisible ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {isVisible ? <EyeOff size={16} className="text-slate-400" /> : <Eye size={16} className="text-slate-400" />}
+              </button>
+              <button 
+                onClick={() => onCopy(credential.password, 'Senha')}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                title="Copiar senha"
+              >
+                <Copy size={16} className="text-slate-400" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      
+      {/* Observações */}
+      {credential.notes && (
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          <label className="text-xs text-slate-500 mb-1 block">Observações</label>
+          <p className="text-sm text-slate-600">{credential.notes}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Info Section Component
+function InfoSection({ icon: Icon, title, color, children }) {
+  const colorClasses = {
+    blue: 'from-blue-500 to-blue-600',
+    green: 'from-emerald-500 to-emerald-600',
+    purple: 'from-purple-500 to-purple-600',
+    orange: 'from-orange-500 to-orange-600',
+    emerald: 'from-teal-500 to-emerald-600',
+    slate: 'from-slate-500 to-slate-600'
+  }
+  
+  return (
+    <div className="bg-slate-50 rounded-2xl p-5">
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${colorClasses[color]} flex items-center justify-center shadow-lg`}>
+          <Icon size={18} className="text-white" />
+        </div>
+        <h3 className="font-semibold text-slate-800">{title}</h3>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function InfoGrid({ children }) {
+  return <div className="grid grid-cols-2 gap-4">{children}</div>
+}
+
+function InfoItem({ label, value, span = 1, highlight, truncate }) {
+  return (
+    <div className={span === 2 ? 'col-span-2' : ''}>
+      <p className="text-xs text-slate-500 mb-1">{label}</p>
+      <p className={`font-medium ${highlight ? 'text-lg text-emerald-600' : 'text-slate-800'} ${truncate ? 'truncate' : ''}`} title={truncate ? value : undefined}>
+        {value || '-'}
+      </p>
+    </div>
+  )
+}
+
+// Form Modal with Credentials
+function ClientFormModal({ title, client, onClose, onSave, saving }) {
+  const [formData, setFormData] = useState(client)
+  const [activeFormTab, setActiveFormTab] = useState('dados') // 'dados' ou 'acessos'
+  const [credentials, setCredentials] = useState([])
+  const [loadingCredentials, setLoadingCredentials] = useState(false)
+  
+  // Carregar credenciais se estiver editando
+  useEffect(() => {
+    if (client.id) {
+      fetchCredentials()
+    } else {
+      // Inicializar com credenciais padrão vazias para novo cliente
+      setCredentials([
+        { id: 'temp_1', credential_type: 'standard', platform_name: 'Instagram', login: '', password: '', notes: '' },
+        { id: 'temp_2', credential_type: 'standard', platform_name: 'Facebook', login: '', password: '', notes: '' },
+        { id: 'temp_3', credential_type: 'standard', platform_name: 'E-mail', login: '', password: '', notes: '' },
+      ])
+    }
+  }, [client.id])
+
+  const fetchCredentials = async () => {
+    setLoadingCredentials(true)
+    try {
+      const response = await fetch(`/api/clientes/credentials?client_id=${client.id}`)
+      const data = await response.json()
+      if (data.credentials && data.credentials.length > 0) {
+        setCredentials(data.credentials)
+      } else {
+        // Inicializar com credenciais padrão vazias
+        setCredentials([
+          { id: 'temp_1', credential_type: 'standard', platform_name: 'Instagram', login: '', password: '', notes: '' },
+          { id: 'temp_2', credential_type: 'standard', platform_name: 'Facebook', login: '', password: '', notes: '' },
+          { id: 'temp_3', credential_type: 'standard', platform_name: 'E-mail', login: '', password: '', notes: '' },
+        ])
+      }
+    } catch (error) {
+      console.error('Error fetching credentials:', error)
+      setCredentials([
+        { id: 'temp_1', credential_type: 'standard', platform_name: 'Instagram', login: '', password: '', notes: '' },
+        { id: 'temp_2', credential_type: 'standard', platform_name: 'Facebook', login: '', password: '', notes: '' },
+        { id: 'temp_3', credential_type: 'standard', platform_name: 'E-mail', login: '', password: '', notes: '' },
+      ])
+    } finally {
+      setLoadingCredentials(false)
+    }
+  }
+
+  const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  
+  const handleCredentialChange = (id, field, value) => {
+    setCredentials(prev => prev.map(cred => 
+      cred.id === id ? { ...cred, [field]: value } : cred
+    ))
+  }
+
+  const addCustomCredential = () => {
+    const newId = `temp_${Date.now()}`
+    setCredentials(prev => [...prev, {
+      id: newId,
+      credential_type: 'custom',
+      platform_name: '',
+      login: '',
+      password: '',
+      notes: ''
+    }])
+  }
+
+  const removeCredential = (id) => {
+    // Não permitir remover credenciais padrão
+    const cred = credentials.find(c => c.id === id)
+    if (cred?.credential_type === 'standard') return
+    setCredentials(prev => prev.filter(c => c.id !== id))
+  }
+
+  const handleSubmit = (e) => { 
+    e.preventDefault()
+    // Filtrar credenciais que têm pelo menos login ou senha preenchidos
+    const validCredentials = credentials.filter(c => c.login || c.password)
+    onSave(formData, validCredentials)
+  }
+
+  const inputClass = "w-full px-4 py-3 bg-slate-50 border-0 rounded-xl focus:ring-2 focus:ring-franca-green text-slate-700 placeholder:text-slate-400"
+  const labelClass = "block text-sm font-medium text-slate-600 mb-2"
+
+  // Pegar sugestões de plataformas baseado no segmento
+  const suggestions = platformSuggestions[formData.segmento] || []
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100">
+          <h2 className="text-xl font-bold text-slate-800">{title}</h2>
+          <button onClick={onClose} className="w-12 h-12 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center justify-center transition-colors cursor-pointer">
+            <X size={24} className="text-slate-500" />
+          </button>
+        </div>
+
+        {/* Form Tabs */}
+        <div className="px-8 py-3 border-b border-slate-100 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveFormTab('dados')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
+              activeFormTab === 'dados'
+                ? 'bg-franca-blue text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <Building2 size={16} /> Dados do Cliente
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveFormTab('acessos')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
+              activeFormTab === 'acessos'
+                ? 'bg-violet-600 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <Shield size={16} /> Cofre de Acessos
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-8 overflow-y-auto max-h-[calc(90vh-240px)]" style={{ scrollBehavior: 'auto' }}>
+          {activeFormTab === 'dados' ? (
+            <>
+              {/* Dados Básicos */}
+              <div className="mb-8">
+                <h3 className="font-semibold text-slate-800 mb-5 flex items-center gap-2"><Building2 size={18} className="text-franca-green" />Dados Básicos</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                  <div>
+                    <label className={labelClass}>Status *</label>
+                    <select name="status" value={formData.status || ''} onChange={handleChange} className={inputClass} required>
+                      <option value="Ativo">Ativo</option>
+                      <option value="Inativo">Inativo</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className={labelClass}>Nome da Empresa *</label>
+                    <input type="text" name="nome_empresa" value={formData.nome_empresa || ''} onChange={handleChange} className={inputClass} required />
+                  </div>
+                  <div>
+                    <label className={labelClass}>TAG</label>
+                    <input type="text" name="tag" value={formData.tag || ''} onChange={handleChange} className={inputClass} maxLength={10} placeholder="Ex: BRUA" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Cliente */}
+              <div className="mb-8">
+                <h3 className="font-semibold text-slate-800 mb-5 flex items-center gap-2"><User size={18} className="text-franca-green" />Dados do Cliente</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div><label className={labelClass}>Nome</label><input type="text" name="nome_cliente" value={formData.nome_cliente || ''} onChange={handleChange} className={inputClass} /></div>
+                  <div><label className={labelClass}>Gênero</label><select name="genero" value={formData.genero || ''} onChange={handleChange} className={inputClass}><option value="">Selecione...</option><option value="Masculino">Masculino</option><option value="Feminino">Feminino</option><option value="Outro">Outro</option></select></div>
+                  <div><label className={labelClass}>Aniversário</label><input type="date" name="aniversario" value={formData.aniversario || ''} onChange={handleChange} className={inputClass} /></div>
+                  <div><label className={labelClass}>WhatsApp</label><input type="text" name="numero" value={formData.numero || ''} onChange={handleChange} className={inputClass} placeholder="5521999999999" /></div>
+                  <div><label className={labelClass}>E-mail</label><input type="email" name="email" value={formData.email || ''} onChange={handleChange} className={inputClass} /></div>
+                  <div><label className={labelClass}>CNPJ/CPF</label><input type="text" name="cnpj_cpf" value={formData.cnpj_cpf || ''} onChange={handleChange} className={inputClass} /></div>
+                </div>
+              </div>
+
+              {/* Endereço */}
+              <div className="mb-8">
+                <h3 className="font-semibold text-slate-800 mb-5 flex items-center gap-2"><MapPin size={18} className="text-franca-green" />Endereço</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                  <div className="md:col-span-2"><label className={labelClass}>Logradouro</label><input type="text" name="endereco" value={formData.endereco || ''} onChange={handleChange} className={inputClass} /></div>
+                  <div><label className={labelClass}>Número</label><input type="text" name="numero_endereco" value={formData.numero_endereco || ''} onChange={handleChange} className={inputClass} /></div>
+                  <div><label className={labelClass}>CEP</label><input type="text" name="cep" value={formData.cep || ''} onChange={handleChange} className={inputClass} /></div>
+                  <div className="md:col-span-2"><label className={labelClass}>Cidade</label><input type="text" name="cidade" value={formData.cidade || ''} onChange={handleChange} className={inputClass} /></div>
+                  <div className="md:col-span-2"><label className={labelClass}>Estado</label><input type="text" name="estado" value={formData.estado || ''} onChange={handleChange} className={inputClass} /></div>
+                </div>
+              </div>
+
+              {/* Serviço */}
+              <div className="mb-8">
+                <h3 className="font-semibold text-slate-800 mb-5 flex items-center gap-2"><Briefcase size={18} className="text-franca-green" />Serviço</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div>
+                    <label className={labelClass}>Segmento</label>
+                    <select name="segmento" value={formData.segmento || ''} onChange={handleChange} className={inputClass}>
+                      <option value="">Selecione...</option>
+                      <option value="E-commerce">E-commerce</option>
+                      <option value="Negócio Local">Negócio Local</option>
+                      <option value="Infoproduto">Infoproduto</option>
+                      <option value="Inside Sales">Inside Sales</option>
+                      <option value="Lançamento">Lançamento</option>
+                      <option value="Food service">Food service</option>
+                      <option value="Serviços online">Serviços online</option>
+                    </select>
+                  </div>
+                  <div><label className={labelClass}>Nicho</label><input type="text" name="nicho" value={formData.nicho || ''} onChange={handleChange} className={inputClass} placeholder="Ex: Moda Praia" /></div>
+                  <div><label className={labelClass}>Fat. Médio</label><input type="number" name="faturamento_medio" value={formData.faturamento_medio || ''} onChange={handleChange} className={inputClass} /></div>
+                  <div className="md:col-span-3">
+                    <label className={labelClass}>Serviços Contratados</label>
+                    <div className="flex flex-wrap gap-3 mt-2">
+                      {['Tráfego Pago', 'Produção de Conteúdo', 'IA'].map((servico) => {
+                        const isSelected = (formData.servicos_contratados || '').includes(servico)
+                        return (
+                          <label
+                            key={servico}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 cursor-pointer transition-all ${
+                              isSelected 
+                                ? 'border-franca-green bg-franca-green/10 text-franca-blue' 
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const current = formData.servicos_contratados ? formData.servicos_contratados.split(', ').filter(Boolean) : []
+                                let updated
+                                if (e.target.checked) {
+                                  updated = [...current, servico]
+                                } else {
+                                  updated = current.filter(s => s !== servico)
+                                }
+                                handleChange({ target: { name: 'servicos_contratados', value: updated.join(', ') } })
+                              }}
+                              className="sr-only"
+                            />
+                            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                              isSelected ? 'border-franca-green bg-franca-green' : 'border-slate-300'
+                            }`}>
+                              {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                            </div>
+                            <span className="font-medium text-sm">{servico}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pagamento */}
+              <div className="mb-8">
+                <h3 className="font-semibold text-slate-800 mb-5 flex items-center gap-2"><DollarSign size={18} className="text-franca-green" />Pagamento</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                  <div><label className={labelClass}>Modelo</label><select name="modelo_pagamento" value={formData.modelo_pagamento || ''} onChange={handleChange} className={inputClass}><option value="">Selecione...</option><option value="Fixo">Fixo</option><option value="Variável">Variável</option><option value="Outro">Outro</option></select></div>
+                  <div><label className={labelClass}>Valor (R$)</label><input type="number" name="valor_servico" value={formData.valor_servico || ''} onChange={handleChange} className={inputClass} step="0.01" /></div>
+                  <div><label className={labelClass}>Dia Pgto</label><input type="number" name="dia_pagamento" value={formData.dia_pagamento || ''} onChange={handleChange} className={inputClass} min="1" max="31" /></div>
+                  <div>
+                    <label className={labelClass}>Canal Venda</label>
+                    <select name="canal_venda" value={formData.canal_venda || ''} onChange={handleChange} className={inputClass}>
+                      <option value="">Selecione...</option>
+                      <option value="Indicação">Indicação</option>
+                      <option value="Prospecção Ativa">Prospecção Ativa</option>
+                      <option value="Pesca em Balde">Pesca em Balde</option>
+                      <option value="Marketplace">Marketplace</option>
+                      <option value="Eventos presenciais">Eventos presenciais</option>
+                      <option value="Tráfego Pago">Tráfego Pago</option>
+                      <option value="Produção de conteúdo">Produção de conteúdo</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Datas */}
+              <div className="mb-8">
+                <h3 className="font-semibold text-slate-800 mb-5 flex items-center gap-2"><Calendar size={18} className="text-franca-green" />Datas</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div><label className={labelClass}>Data de Início</label><input type="date" name="data_inicio" value={formData.data_inicio || ''} onChange={handleChange} className={inputClass} /></div>
+                  <div><label className={labelClass}>Data de Encerramento</label><input type="date" name="data_encerramento" value={formData.data_encerramento || ''} onChange={handleChange} className={inputClass} /></div>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Aba de Acessos */
+            <div className="space-y-8">
+              {/* Header do Cofre */}
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <Shield size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800">Cofre de Acessos</h3>
+                    <p className="text-sm text-slate-500">Gerencie as credenciais do cliente</p>
+                  </div>
+                </div>
+              </div>
+
+              {loadingCredentials ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <Loader size={32} className="animate-spin text-violet-500 mb-4" />
+                  <p className="text-slate-500">Carregando acessos...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Acessos Padrão */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <Key size={14} /> Acessos Padrão
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {credentials.filter(c => c.credential_type === 'standard').map((cred) => (
+                        <CredentialFormCard 
+                          key={cred.id}
+                          credential={cred}
+                          onChange={handleCredentialChange}
+                          onRemove={() => {}}
+                          canRemove={false}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Acessos Específicos */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                        <Globe size={14} /> Acessos Específicos {formData.segmento && `(${formData.segmento})`}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={addCustomCredential}
+                        className="flex items-center gap-2 px-4 py-2 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-colors font-medium text-sm"
+                      >
+                        <Plus size={16} /> Adicionar Acesso
+                      </button>
+                    </div>
+
+                    {/* Sugestões de plataformas */}
+                    {suggestions.length > 0 && (
+                      <div className="mb-4 p-4 bg-violet-50 rounded-xl border border-violet-100">
+                        <p className="text-xs text-violet-600 font-medium mb-2">Sugestões para {formData.segmento}:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {suggestions.map((platform) => (
+                            <button
+                              key={platform}
+                              type="button"
+                              onClick={() => {
+                                const newId = `temp_${Date.now()}`
+                                setCredentials(prev => [...prev, {
+                                  id: newId,
+                                  credential_type: 'custom',
+                                  platform_name: platform,
+                                  login: '',
+                                  password: '',
+                                  notes: ''
+                                }])
+                              }}
+                              className="px-3 py-1.5 bg-white text-violet-700 rounded-lg text-xs font-medium hover:bg-violet-100 transition-colors border border-violet-200"
+                            >
+                              + {platform}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {credentials.filter(c => c.credential_type === 'custom').length === 0 ? (
+                      <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                        <Globe size={32} className="mx-auto text-slate-300 mb-3" />
+                        <p className="text-slate-500 text-sm">Nenhum acesso específico adicionado</p>
+                        <p className="text-slate-400 text-xs">Clique em "Adicionar Acesso" ou escolha uma sugestão</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {credentials.filter(c => c.credential_type === 'custom').map((cred) => (
+                          <CredentialFormCard 
+                            key={cred.id}
+                            credential={cred}
+                            onChange={handleCredentialChange}
+                            onRemove={removeCredential}
+                            canRemove={true}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-4 pt-6 border-t border-slate-100 mt-8">
+            <button type="button" onClick={onClose} className="px-6 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors">Cancelar</button>
+            <button type="submit" disabled={saving} className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-franca-green to-emerald-400 text-franca-blue font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50">
+              {saving ? <Loader size={18} className="animate-spin" /> : <Save size={18} />}
+              {saving ? 'Salvando...' : 'Salvar Cliente'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// Credential Form Card Component
+function CredentialFormCard({ credential, onChange, onRemove, canRemove }) {
+  const [showPassword, setShowPassword] = useState(false)
+  const { icon: PlatformIcon, bgColor } = getPlatformStyle(credential.platform_name)
+  
+  const inputClass = "w-full px-3 py-2.5 bg-slate-50 border-0 rounded-lg focus:ring-2 focus:ring-violet-400 text-slate-700 placeholder:text-slate-400 text-sm"
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md transition-all relative">
+      {canRemove && (
+        <button
+          type="button"
+          onClick={() => onRemove(credential.id)}
+          className="absolute top-3 right-3 p-1.5 hover:bg-red-100 rounded-lg transition-colors group"
+          title="Remover acesso"
+        >
+          <Trash2 size={16} className="text-slate-400 group-hover:text-red-500" />
+        </button>
+      )}
+      
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`w-10 h-10 ${bgColor} rounded-xl flex items-center justify-center shadow-md`}>
+          <PlatformIcon size={20} className="text-white" />
+        </div>
+        {credential.credential_type === 'standard' ? (
+          <h5 className="font-semibold text-slate-800">{credential.platform_name}</h5>
+        ) : (
+          <input
+            type="text"
+            value={credential.platform_name}
+            onChange={(e) => onChange(credential.id, 'platform_name', e.target.value)}
+            placeholder="Nome da plataforma"
+            className="font-semibold text-slate-800 bg-transparent border-0 focus:ring-0 p-0 flex-1"
+          />
+        )}
+      </div>
+      
+      {/* Login */}
+      <div className="mb-3">
+        <label className="text-xs text-slate-500 mb-1 block">Login / E-mail</label>
+        <input
+          type="text"
+          value={credential.login}
+          onChange={(e) => onChange(credential.id, 'login', e.target.value)}
+          placeholder="Digite o login"
+          className={inputClass}
+        />
+      </div>
+      
+      {/* Senha */}
+      <div className="mb-3">
+        <label className="text-xs text-slate-500 mb-1 block">Senha</label>
+        <div className="relative">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={credential.password}
+            onChange={(e) => onChange(credential.id, 'password', e.target.value)}
+            placeholder="Digite a senha"
+            className={`${inputClass} pr-10`}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            {showPassword ? <EyeOff size={16} className="text-slate-400" /> : <Eye size={16} className="text-slate-400" />}
+          </button>
+        </div>
+      </div>
+      
+      {/* Observações */}
+      <div>
+        <label className="text-xs text-slate-500 mb-1 block">Observações (opcional)</label>
+        <input
+          type="text"
+          value={credential.notes || ''}
+          onChange={(e) => onChange(credential.id, 'notes', e.target.value)}
+          placeholder="Ex: Perfil pessoal do cliente"
+          className={inputClass}
+        />
+      </div>
+    </div>
+  )
+}
+
+// Delete Modal
+function DeleteConfirmModal({ client, onClose, onConfirm, saving }) {
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="text-center">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle size={40} className="text-red-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3">Excluir Cliente</h2>
+          <p className="text-slate-600 mb-8">
+            Tem certeza que deseja excluir <strong className="text-slate-800">{client.nome_empresa}</strong>?<br />
+            <span className="text-sm text-slate-500">Esta ação não pode ser desfeita.</span>
+          </p>
+          <div className="flex gap-4 justify-center">
+            <button onClick={onClose} className="px-6 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors">Cancelar</button>
+            <button onClick={onConfirm} disabled={saving} className="flex items-center gap-2 px-6 py-3 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transition-all disabled:opacity-50">
+              {saving ? <Loader size={18} className="animate-spin" /> : <Trash2 size={18} />}
+              {saving ? 'Excluindo...' : 'Excluir'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
